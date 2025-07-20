@@ -1,0 +1,6 @@
+
+[ ] scraping mechanism
+[ ] sqlite backend
+[ ] terminal interface (rich)
+[ ] ical exporter (subscribing to a calendar)
+[ ] venue list generation

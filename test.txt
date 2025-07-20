@@ -1,0 +1,8 @@
+input:
+Brick & Mortar Music Hall
+
+output:
+July 20th, KEVIAN KRAEMER, 8:00PM, $30.31, https://www.brickandmortarmusic.com/tm-event/kevian-kraemer/
+July 23rd, WILL HILL, IAN KELLY, 5INCO, JACKSON STONE, 8:00PM, $23.92 - $113.02, https://www.brickandmortarmusic.com/tm-event/will-hill-ian-kelly-5inco-jackson-stone/
+July 24th, BOTTOMBUNK, THE LIGHTING SECTION, EVERYBODY'S FLOWERS, 8:30PM, $21.86, https://www.brickandmortarmusic.com/tm-event/bottombunk-the-lighting-section-everybodys-flowers/
+July 30th, WAKE NAKED, KINDA GOOD BAND, RIFF MAMA, 8:30PM, $21.86, https://www.brickandmortarmusic.com/tm-event/wake-naked-kinda-good-band-riff-mama/
