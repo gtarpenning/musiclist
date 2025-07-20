@@ -1,7 +1,9 @@
 # LLM Context - Musiclist SF Venue Scraper
 
 ## Project Overview
-Multi-venue music event scraper for San Francisco venues. Scrapes events → SQLite → Rich terminal display with **centralized configuration**, **unified CLI interface**, and **smart date filtering**.
+Multi-venue music event scraper for San Francisco venues. Scrapes events → SQLite → Rich terminal display with **centralized configuration**, **unified CLI interface**, and **smart date filtering**. 
+
+**Pip Package**: Install with `pip install -e .` for global `music` command access.
 
 ## Key Architecture
 
@@ -13,10 +15,11 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 - Easy to add new venues: just add to VENUES_CONFIG array
 
 ### Unified CLI Interface (cli.py)
-- **python cli.py** (default: calendar view - current & next month)
-- **python cli.py calendar** (filtered events for current + next month)
-- **python cli.py scrape** (all upcoming events)
-- **python cli.py --list-venues** (show available venues)
+- **music** (default: calendar view - current & next month)
+- **music calendar** (filtered events for current + next month)
+- **music scrape** (all upcoming events)
+- **music --list-venues** (show available venues)
+- **Pip package** with console script entry point for global access
 - **Argument parser** with help, subcommands, and examples
 - **main.py integration**: now imports scrape_all_venues() for backward compatibility
 
@@ -153,20 +156,25 @@ UNIQUE constraint: (venue_id, date, artists, url) prevents duplicates
 4. **Run `python tests/run_tests.py [venue]`** to validate
 5. **Tests automatically available** - no manual test file creation needed
 
-## CLI Usage Examples
+## Installation & Usage
 ```bash
+# Install the package
+pip install -e .          # Install in development mode
+
 # Quick access via make
 make calendar              # Filtered view (30 events for July & August)
 make scrape               # All events (67 total events)
 make venues               # List: Brick & Mortar Music Hall, The Warfield
 make test                 # Run 14 dynamic tests
 
-# Direct CLI usage  
-python cli.py             # Default: calendar view
-python cli.py calendar    # Same as above
-python cli.py scrape      # All events
-python cli.py --list-venues  # Show venues
-python cli.py --help      # Full help
+# Direct CLI usage (global commands)
+music                     # Default: calendar view
+music calendar            # Same as above
+music scrape              # All events
+music --list-venues       # Show venues
+music --help              # Full help
+music --star-venue "The Warfield"       # Star a venue
+music --unstar-venue "The Warfield"     # Unstar a venue
 
 # Advanced testing
 python tests/run_tests.py --list                    # Show available venue tests
@@ -176,13 +184,14 @@ python tests/run_tests.py brick --generate         # Generate fresh test data
 ```
 
 ## Dependencies
-```txt
-requests>=2.31.0
-beautifulsoup4>=4.12.0  
-rich>=13.0.0
-lxml>=4.9.0
-python-dateutil>=2.8.0
-```
+Managed via `pyproject.toml`:
+- requests>=2.31.0
+- beautifulsoup4>=4.12.0  
+- rich>=13.0.0
+- lxml>=4.9.0
+- python-dateutil>=2.8.0
+
+Install with: `pip install -e .`
 
 ## Current Status: Production Ready
 
@@ -198,6 +207,7 @@ python-dateutil>=2.8.0
 **Architecture:**
 - ✅ **Centralized configuration** in venues_config.py
 - ✅ **Unified CLI interface** with intuitive commands
+- ✅ **Pip package structure** with global `music` command
 - ✅ **Dynamic test generation** eliminates manual test files
 - ✅ **Modular scraper system** for easy venue additions
 - ✅ **Professional Makefile** with helpful examples

@@ -30,7 +30,7 @@ class Database:
                     last_scraped TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     venue_id INTEGER NOT NULL,
@@ -43,7 +43,7 @@ class Database:
                     FOREIGN KEY (venue_id) REFERENCES venues (id),
                     UNIQUE (venue_id, date, artists, url)
                 );
-                
+
                 CREATE INDEX IF NOT EXISTS idx_events_date ON events (date);
                 CREATE INDEX IF NOT EXISTS idx_events_venue ON events (venue_id);
             """

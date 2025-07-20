@@ -1,29 +1,41 @@
 # Musiclist Project Makefile
 # Simple automation for development tasks
 
-.PHONY: help format test test-list install clean setup calendar scrape venues
+.PHONY: help format test test-list install clean setup calendar scrape venues starred version-update build push publish-update
 
 # Default target
 help:
 	@echo "🎵 Musiclist Project Makefile"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  calendar   - Show calendar view (current + next month)"
-	@echo "  scrape     - Scrape all venues and show all events"
-	@echo "  venues     - List all available venues"
-	@echo "  format     - Format code using black"
-	@echo "  test       - Run all tests"
-	@echo "  test-list  - List available tests"
-	@echo "  install    - Install dependencies"
-	@echo "  setup      - Set up development environment"
-	@echo "  clean      - Clean up temporary files"
+	@echo "  calendar        - Show calendar view (current + next month)"
+	@echo "  scrape          - Scrape all venues and show all events"
+	@echo "  venues          - List all available venues"
+	@echo "  starred         - List starred venues"
+	@echo "  version-update  - Bump patch version (e.g. 0.1.5 -> 0.1.6)"
+	@echo "  build           - Build package for PyPI"
+	@echo "  push            - Publish package to PyPI"
+	@echo "  publish-update  - Bump version, build, and publish to PyPI"
+	@echo "  format          - Format code using black"
+	@echo "  test            - Run all tests"
+	@echo "  test-list       - List available tests"
+	@echo "  install         - Install dependencies"
+	@echo "  setup           - Set up development environment"
+	@echo "  clean           - Clean up temporary files"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make calendar                           # Show events for July & August 2025"
 	@echo "  make scrape                            # Show all upcoming events"
 	@echo "  make venues                            # List Brick & Mortar Music Hall, The Warfield"
+	@echo "  make starred                           # List starred venues"
+	@echo "  make version-update                     # Bump version from 0.1.5 -> 0.1.6"
+	@echo "  make build                             # Build package (creates dist/)"
+	@echo "  make push                              # Publish to PyPI"
+	@echo "  make publish-update                     # Full release workflow"
 	@echo "  make test                              # Run all venue tests"
-	@echo "  python cli.py --help                  # Show CLI options"
+	@echo "  music --help                           # Show CLI options"
+	@echo "  music --star-venue \"The Warfield\"        # Star a venue"
+	@echo "  music --unstar-venue \"The Warfield\"      # Unstar a venue"
 	@echo "  python tests/run_tests.py brick --generate  # Generate test data"
 
 # Format code using black
@@ -51,23 +63,28 @@ install:
 # Set up development environment
 setup: install
 	@echo "🔧 Setting up development environment..."
-	@pip install black pytest
+	@pip install black pytest build twine
 	@echo "✅ Development environment ready"
 
 # Show calendar view with all venues (current + next month)
 calendar:
 	@echo "🗓️  Loading music calendar..."
-	@python cli.py calendar
+	@music calendar
 
 # Scrape all venues and show all events
 scrape:
 	@echo "🎵 Scraping all venues..."
-	@python cli.py scrape
+	@music scrape
 
 # List all available venues
 venues:
 	@echo "📍 Available venues:"
-	@python cli.py --list-venues
+	@music --list-venues
+
+# List starred venues
+starred:
+	@echo "⭐ Starred venues:"
+	@music --list-starred
 
 # Clean up temporary files
 clean:
@@ -78,4 +95,26 @@ clean:
 	@rm -rf .pytest_cache/
 	@rm -rf build/
 	@rm -rf dist/
-	@echo "✅ Cleanup complete" 
+	@echo "✅ Cleanup complete"
+
+# Update version (bump patch version)
+version-update:
+	@echo "🔢 Updating version..."
+	@python utils/version_utils.py bump
+	@echo "✅ Version updated successfully"
+
+# Build package for PyPI
+build: clean
+	@echo "🏗️  Building package for PyPI..."
+	@python -m build
+	@echo "📦 Package built successfully"
+
+# Publish package to PyPI
+push:
+	@echo "🚀 Publishing to PyPI..."
+	@python -m twine upload dist/*
+	@echo "✅ Package published to PyPI successfully"
+
+# Full release workflow: bump version, build, and publish
+publish-update: version-update build push
+	@echo "🎉 Release complete! Package updated and published to PyPI" 

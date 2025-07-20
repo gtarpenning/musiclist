@@ -10,6 +10,7 @@ from rich.markdown import Markdown
 from rich.columns import Columns
 
 from models import Event
+from venues_config import get_starred_venues
 
 
 class Terminal:
@@ -46,79 +47,137 @@ class Terminal:
         self.console.print(table)
         self.console.print(f"\n[dim]Found {len(events)} events[/dim]")
 
-    def display_calendar_events(self, events: List[Event], title: str = "🎵 Upcoming Music Events"):
-        """Display events in a calendar view with clickable links"""
+    def display_calendar_events(
+        self, events: List[Event], title: str = "🎵 Upcoming Music Events"
+    ):
+        """Display events in a calendar view with clickable links, day of week, weekend highlighting, and venue stars"""
         if not events:
             self.console.print("[yellow]No events found[/yellow]")
             return
 
         table = Table(title=title, show_header=True, header_style="bold blue")
 
-        table.add_column("Date", style="cyan", width=12)
-        table.add_column("Time", style="green", width=8) 
-        table.add_column("Event", style="bright_white", width=45)
-        table.add_column("Venue", style="magenta", width=25)
+        table.add_column("Date", style="cyan", width=16)
+        table.add_column("Time", style="green", width=8)
+        table.add_column("Event", style="bright_white", width=40)
+        table.add_column("Venue", style="magenta", width=30)
         table.add_column("Cost", style="yellow", width=15)
 
+        # Get starred venues for icon display
+        starred_venues = get_starred_venues()
+
         for event in events:
-            date_str = event.date.strftime("%b %d")
+            # Format date with day of week
+            day_of_week = event.date.strftime("%a").upper()  # MON, TUE, etc.
+            date_str = f"{day_of_week} {event.date.strftime('%b %d')}"
+
+            # Check if it's a weekend (Friday or Saturday)
+            is_weekend = event.date.weekday() in [4, 5]  # 4=Friday, 5=Saturday
+
+            # Apply weekend highlighting to the date
+            if is_weekend:
+                date_str = f"[bold yellow]{date_str}[/bold yellow]"
+
             time_str = event.time.strftime("%I:%M %p") if event.time else "TBD"
-            venue_str = event.venue
             cost_str = event.cost or "TBD"
-            
+
+            # Add star icon for starred venues
+            venue_str = event.venue
+            if event.venue in starred_venues:
+                venue_str = f"⭐ {event.venue}"
+
             # Create clickable event link
             artists_str = event.artists_display
-            if len(artists_str) > 42:
-                artists_str = artists_str[:39] + "..."
-            
-            # Make the event title clickable if there's a URL
-            if event.url:
-                event_link = f"[link={event.url}]{artists_str}[/link]"
+            if len(artists_str) > 37:
+                artists_str = artists_str[:34] + "..."
+
+            # Apply weekend highlighting to the entire event if weekend
+            if is_weekend:
+                if event.url:
+                    # For weekends, make link yellow instead of nesting markup
+                    event_link = f"[bold yellow link={event.url}]{artists_str}[/bold yellow link]"
+                else:
+                    event_link = f"[bold yellow]{artists_str}[/bold yellow]"
+                venue_str = f"[bold yellow]{venue_str}[/bold yellow]"
+                cost_str = f"[bold yellow]{cost_str}[/bold yellow]"
             else:
-                event_link = artists_str
+                # Make the event title clickable if there's a URL
+                if event.url:
+                    event_link = f"[link={event.url}]{artists_str}[/link]"
+                else:
+                    event_link = artists_str
 
             table.add_row(date_str, time_str, event_link, venue_str, cost_str)
 
         self.console.print(table)
-        self.console.print(f"\n[dim]📅 Found {len(events)} upcoming events • Click on event names to view details[/dim]")
+
+        # Count weekend events for summary
+        weekend_events = sum(1 for event in events if event.date.weekday() in [4, 5])
+        starred_events = sum(1 for event in events if event.venue in starred_venues)
+
+        summary_parts = [f"📅 Found {len(events)} upcoming events"]
+        if weekend_events > 0:
+            summary_parts.append(f"🎉 {weekend_events} weekend shows")
+        if starred_events > 0:
+            summary_parts.append(f"⭐ {starred_events} at starred venues")
+        summary_parts.append("Click on event names to view details")
+
+        self.console.print(f"\n[dim]{' • '.join(summary_parts)}[/dim]")
 
     def display_venue_summary(self, venue_stats: Dict[str, int]):
-        """Display a summary of venues and their event counts"""
+        """Display a summary of venues and their event counts with starring info"""
         if not venue_stats:
             return
-            
+
         self.console.print("\n")
-        
+
         # Create venue summary table
-        venue_table = Table(title="📍 Venue Summary", show_header=True, header_style="bold magenta")
-        venue_table.add_column("Venue", style="bright_white", width=30)
+        venue_table = Table(
+            title="📍 Venue Summary", show_header=True, header_style="bold magenta"
+        )
+        venue_table.add_column("Venue", style="bright_white", width=35)
         venue_table.add_column("Events Found", style="cyan", justify="right", width=15)
         venue_table.add_column("Status", style="green", width=15)
-        
+
+        # Get starred venues for display
+        starred_venues = get_starred_venues()
+
         total_events = 0
         for venue_name, count in venue_stats.items():
             total_events += count
             status = "✓ Active" if count > 0 else "⚠️ No Events"
             status_style = "green" if count > 0 else "yellow"
-            
+
+            # Add star icon for starred venues
+            display_name = venue_name
+            if venue_name in starred_venues:
+                display_name = f"⭐ {venue_name}"
+
             venue_table.add_row(
-                venue_name, 
-                str(count),
-                f"[{status_style}]{status}[/{status_style}]"
+                display_name, str(count), f"[{status_style}]{status}[/{status_style}]"
             )
-        
+
         # Add total row
         venue_table.add_section()
         venue_table.add_row(
-            "[bold]Total[/bold]", 
+            "[bold]Total[/bold]",
             f"[bold]{total_events}[/bold]",
-            "[bold green]All Venues[/bold green]"
+            "[bold green]All Venues[/bold green]",
         )
-        
+
         self.console.print(venue_table)
-        
-        # Add helpful info
-        self.console.print(f"\n[dim]💡 Tip: Events are cached for faster subsequent loads • Click event names to buy tickets[/dim]")
+
+        # Add helpful info with starring tips
+        tips = [
+            "Events are cached for faster subsequent loads",
+            "Click event names to buy tickets",
+        ]
+        if starred_venues:
+            tips.append(f"⭐ {len(starred_venues)} starred venues highlighted")
+        else:
+            tips.append('Use --star-venue "VENUE NAME" to star favorites')
+
+        self.console.print(f"\n[dim]💡 Tip: {' • '.join(tips)}[/dim]")
 
     def show_scraping_progress(self, venue_name: str):
         """Show progress spinner for scraping"""
