@@ -2,7 +2,7 @@ import re
 import requests
 import time
 from abc import ABC, abstractmethod
-from datetime import time as dt_time
+from datetime import time as dt_time, date
 from typing import List, Optional
 from urllib.parse import urljoin
 
@@ -174,3 +174,119 @@ class BaseScraper(ABC):
                 return match.group(0).strip()
 
         return None
+
+    def parse_full_date_format(self, date_text: str) -> Optional[date]:
+        """Parse full date format like 'Wed, Jul 23, 2025' or 'Wednesday, July 23, 2025'"""
+        if not date_text:
+            return None
+
+        try:
+            # Clean up the date text (remove extra whitespace)
+            date_text = re.sub(r"\s+", " ", date_text.strip())
+
+            # Try common full date patterns
+            patterns = [
+                r"(\w+),\s*(\w+)\s+(\d{1,2}),\s*(\d{4})",  # "Wed, Jul 23, 2025"
+                r"(\w+)\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})",  # "Wednesday July 23, 2025" or "Wednesday July 23 2025"
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, date_text)
+                if match:
+                    day_name, month_name, day, year = match.groups()
+
+                    # Convert month name to number
+                    month_num = self.month_name_to_number(month_name)
+                    if month_num:
+                        return date(int(year), month_num, int(day))
+
+        except (ValueError, AttributeError):
+            pass
+
+        return None
+
+    # Common event parsing methods for venue scrapers
+
+    def parse_single_event(self, element) -> Optional[Event]:
+        """Parse a single event from HTML element (common flow for all venues)"""
+        try:
+            # Extract date
+            event_date = self._extract_date(element)
+            if not event_date:
+                return None
+
+            # Extract time
+            event_time = self._extract_time(element)
+
+            # Extract artists
+            artists = self._extract_artists(element)
+            if not artists:
+                return None
+
+            # Extract URL
+            event_url = self._extract_url(element)
+            if not event_url:
+                return None
+
+            # Extract cost
+            event_cost = self._extract_cost(element)
+
+            return Event(
+                date=event_date,
+                time=event_time,
+                artists=artists,
+                venue=self.venue.name,
+                url=event_url,
+                cost=event_cost,
+            )
+
+        except Exception as e:
+            print(f"Error parsing event: {e}")
+            return None
+
+    def extract_cost_generic(self, element) -> Optional[str]:
+        """Generic cost extraction method that works for most venues"""
+        # Look for price information in various locations
+        price_elements = element.find_all(
+            ["span", "div"], string=lambda text: text and "$" in text
+        )
+
+        for price_elem in price_elements:
+            price_text = price_elem.get_text().strip()
+            cost = self.extract_price_from_text(price_text)
+            if cost:
+                return cost
+
+        # If no price found, check if it's free
+        text_content = element.get_text().lower()
+        if "free" in text_content:
+            return "Free"
+
+        # Default to None if no price information found
+        return None
+
+    # Abstract methods that each venue scraper must implement
+
+    @abstractmethod
+    def _extract_date(self, element) -> Optional[date]:
+        """Extract date from venue-specific event element"""
+        pass
+
+    @abstractmethod
+    def _extract_time(self, element) -> Optional[dt_time]:
+        """Extract time from venue-specific event element"""
+        pass
+
+    @abstractmethod
+    def _extract_artists(self, element) -> List[str]:
+        """Extract artist names from venue-specific event element"""
+        pass
+
+    @abstractmethod
+    def _extract_url(self, element) -> Optional[str]:
+        """Extract event URL from venue-specific event element"""
+        pass
+
+    def _extract_cost(self, element) -> Optional[str]:
+        """Default cost extraction - can be overridden by venue scrapers"""
+        return self.extract_cost_generic(element)

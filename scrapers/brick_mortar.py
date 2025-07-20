@@ -24,40 +24,8 @@ class BrickMortarScraper(BaseScraper):
 
     def _parse_single_event(self, element) -> Optional[Event]:
         """Parse a single event from HTML element"""
-        try:
-            # Extract date
-            event_date = self._extract_date(element)
-            if not event_date:
-                return None
-
-            # Extract time
-            event_time = self._extract_time(element)
-
-            # Extract artists
-            artists = self._extract_artists(element)
-            if not artists:
-                return None
-
-            # Extract URL
-            event_url = self._extract_url(element)
-            if not event_url:
-                return None
-
-            # Extract cost
-            event_cost = self._extract_cost(element)
-
-            return Event(
-                date=event_date,
-                time=event_time,
-                artists=artists,
-                venue=self.venue.name,
-                url=event_url,
-                cost=event_cost,
-            )
-
-        except Exception as e:
-            print(f"Error parsing event: {e}")
-            return None
+        # Use the shared implementation from base class
+        return self.parse_single_event(element)
 
     def _extract_date(self, element) -> Optional[date]:
         """Extract date from Brick & Mortar event element"""
@@ -132,22 +100,5 @@ class BrickMortarScraper(BaseScraper):
 
     def _extract_cost(self, element) -> Optional[str]:
         """Extract ticket cost from Brick & Mortar event element"""
-        # Look for price information in various locations
-        # First check for ticket price in the event details
-        price_elements = element.find_all(
-            ["span", "div"], string=lambda text: text and "$" in text
-        )
-
-        for price_elem in price_elements:
-            price_text = price_elem.get_text().strip()
-            cost = self.extract_price_from_text(price_text)
-            if cost:
-                return cost
-
-        # If no price found, check if it's free
-        text_content = element.get_text().lower()
-        if "free" in text_content:
-            return "Free"
-
-        # Default to None if no price information found
-        return None
+        # Use the shared generic cost extraction
+        return self.extract_cost_generic(element)
