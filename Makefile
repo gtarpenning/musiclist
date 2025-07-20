@@ -1,13 +1,16 @@
 # Musiclist Project Makefile
 # Simple automation for development tasks
 
-.PHONY: help format test test-brick test-list install clean setup
+.PHONY: help format test test-list install clean setup calendar scrape venues
 
 # Default target
 help:
 	@echo "🎵 Musiclist Project Makefile"
 	@echo ""
 	@echo "Available targets:"
+	@echo "  calendar   - Show calendar view (current + next month)"
+	@echo "  scrape     - Scrape all venues and show all events"
+	@echo "  venues     - List all available venues"
 	@echo "  format     - Format code using black"
 	@echo "  test       - Run all tests"
 	@echo "  test-list  - List available tests"
@@ -16,9 +19,12 @@ help:
 	@echo "  clean      - Clean up temporary files"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make format"
-	@echo "  make test"
-	@echo "  make test-brick"
+	@echo "  make calendar                           # Show events for July & August 2025"
+	@echo "  make scrape                            # Show all upcoming events"
+	@echo "  make venues                            # List Brick & Mortar Music Hall, The Warfield"
+	@echo "  make test                              # Run all venue tests"
+	@echo "  python cli.py --help                  # Show CLI options"
+	@echo "  python tests/run_tests.py brick --generate  # Generate test data"
 
 # Format code using black
 format:
@@ -47,6 +53,21 @@ setup: install
 	@echo "🔧 Setting up development environment..."
 	@pip install black pytest
 	@echo "✅ Development environment ready"
+
+# Show calendar view with all venues (current + next month)
+calendar:
+	@echo "🗓️  Loading music calendar..."
+	@python cli.py calendar
+
+# Scrape all venues and show all events
+scrape:
+	@echo "🎵 Scraping all venues..."
+	@python cli.py scrape
+
+# List all available venues
+venues:
+	@echo "📍 Available venues:"
+	@python cli.py --list-venues
 
 # Clean up temporary files
 clean:

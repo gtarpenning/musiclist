@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 from models import Venue
-from scrapers.brick_mortar import BrickMortarScraper
-from scrapers.warfield import WarfieldScraper
 from storage import Cache, Database
 from ui import Terminal
+from venues_config import get_legacy_venues_config
 
 
 def scrape_venue(venue_data, scraper_class, terminal, cache, db):
@@ -35,7 +34,8 @@ def scrape_venue(venue_data, scraper_class, terminal, cache, db):
         return []
 
 
-def main():
+def scrape_all_venues():
+    """Main scraping function - scrapes all venues and displays results"""
     terminal = Terminal()
     terminal.show_header("🎵 Musiclist - Multi-Venue Scraper")
 
@@ -43,25 +43,8 @@ def main():
     cache = Cache()
     db = Database()
 
-    # Define venues and their scrapers
-    venues_config = [
-        {
-            "venue_data": {
-                "name": "Brick & Mortar Music Hall",
-                "base_url": "https://www.brickandmortarmusic.com",
-                "calendar_path": "/calendar/",
-            },
-            "scraper_class": BrickMortarScraper,
-        },
-        {
-            "venue_data": {
-                "name": "The Warfield",
-                "base_url": "https://www.thewarfieldtheatre.com",
-                "calendar_path": "/events/",
-            },
-            "scraper_class": WarfieldScraper,
-        },
-    ]
+    # Get venues from centralized config
+    venues_config = get_legacy_venues_config()
 
     all_events = []
 
@@ -98,6 +81,11 @@ def main():
         terminal.console.print("  • Website structure changes")
         terminal.console.print("  • Network connectivity issues")
         terminal.console.print("  • No upcoming events posted")
+
+
+def main():
+    """Entry point for main.py - backward compatibility"""
+    scrape_all_venues()
 
 
 if __name__ == "__main__":
