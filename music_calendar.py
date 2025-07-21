@@ -49,17 +49,8 @@ class CalendarDisplay:
             # Filter events for current and next month
             filtered_events = self.filter_events_by_date(events)
 
-            self.terminal.show_success(
-                f"Found {len(events)} total events from {venue.name}"
-            )
-            if len(filtered_events) != len(events):
-                self.terminal.show_info(
-                    f"Showing {len(filtered_events)} events for current and next month"
-                )
-
             # Save all events to database (not just filtered ones)
-            new_count = self.db.save_events(events)
-            self.terminal.show_info(f"Saved {new_count} new events to database")
+            self.db.save_events(events)
 
             return filtered_events
         else:

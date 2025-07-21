@@ -12,6 +12,9 @@ import json
 import os
 from scrapers.brick_mortar import BrickMortarScraper
 from scrapers.warfield import WarfieldScraper
+from scrapers.gamh import GAMHScraper
+from scrapers.neck_woods import NeckOfTheWoodsScraper
+from scrapers.regency_ballroom import RegencyBallroomScraper
 
 # Configuration file for storing user preferences
 USER_CONFIG_FILE = "user_config.json"
@@ -34,12 +37,36 @@ VENUES_CONFIG = [
         "enabled": True,
         "starred": False,
     },
+    {
+        "name": "Great American Music Hall",
+        "base_url": "https://gamh.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": GAMHScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Neck of the Woods",
+        "base_url": "https://www.neckofthewoodssf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": NeckOfTheWoodsScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "The Regency Ballroom",
+        "base_url": "https://www.theregencyballroom.com",
+        "calendar_path": "/shows/",
+        "scraper_class": RegencyBallroomScraper,
+        "enabled": True,
+        "starred": False,
+    },
     # Future venues can be added here
     # {
-    #     "name": "Great American Music Hall",
-    #     "base_url": "https://gamh.com",
-    #     "calendar_path": "/calendar/",
-    #     "scraper_class": GAMHScraper,
+    #     "name": "Halcyon SF",
+    #     "base_url": "https://halcyon-sf.com",
+    #     "calendar_path": "/main/",
+    #     "scraper_class": HalcyonScraper,
     #     "enabled": False,  # Not implemented yet
     #     "starred": False,
     # },
