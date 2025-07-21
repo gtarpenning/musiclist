@@ -15,6 +15,13 @@ from scrapers.warfield import WarfieldScraper
 from scrapers.gamh import GAMHScraper
 from scrapers.neck_woods import NeckOfTheWoodsScraper
 from scrapers.regency_ballroom import RegencyBallroomScraper
+from scrapers.midway import MidwayScraper
+from scrapers.independent import IndependentScraper
+from scrapers.bottom_of_hill import BottomOfTheHillScraper
+from scrapers.audio_nightclub import AudioNightclubScraper
+from scrapers.reverb import ReverbScraper
+from scrapers.public_works import PublicWorksScraper
+from scrapers.rickshaw_stop import RickshawStopScraper
 
 # Configuration file for storing user preferences
 USER_CONFIG_FILE = "user_config.json"
@@ -61,15 +68,62 @@ VENUES_CONFIG = [
         "enabled": True,
         "starred": False,
     },
-    # Future venues can be added here
-    # {
-    #     "name": "Halcyon SF",
-    #     "base_url": "https://halcyon-sf.com",
-    #     "calendar_path": "/main/",
-    #     "scraper_class": HalcyonScraper,
-    #     "enabled": False,  # Not implemented yet
-    #     "starred": False,
-    # },
+    {
+        "name": "The Midway",
+        "base_url": "https://themidwaysf.com",
+        "calendar_path": "/events/",
+        "scraper_class": MidwayScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "The Independent",
+        "base_url": "https://www.theindependentsf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": IndependentScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Bottom of the Hill",
+        "base_url": "https://www.bottomofthehill.com",
+        "calendar_path": "/calendar.html",
+        "scraper_class": BottomOfTheHillScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Audio Nightclub",
+        "base_url": "https://m.audiosf.com",
+        "calendar_path": "/events/",
+        "scraper_class": AudioNightclubScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Reverb",
+        "base_url": "https://reverb-sf.com",
+        "calendar_path": "/",
+        "scraper_class": ReverbScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Public Works",
+        "base_url": "https://publicsf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": PublicWorksScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Rickshaw Stop",
+        "base_url": "https://rickshawstop.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": RickshawStopScraper,
+        "enabled": True,
+        "starred": False,
+    },
 ]
 
 
@@ -174,7 +228,7 @@ def get_enabled_venue_names():
     return [venue["name"] for venue in get_enabled_venues()]
 
 
-def venue_to_legacy_format(venue_config):
+def venue_to_format(venue_config):
     """Convert new config format to legacy format for backward compatibility"""
     return {
         "venue_data": {
@@ -187,6 +241,6 @@ def venue_to_legacy_format(venue_config):
 
 
 # For backward compatibility, provide the legacy format
-def get_legacy_venues_config():
+def get_venues_config():
     """Get venues in legacy format for existing code"""
-    return [venue_to_legacy_format(venue) for venue in get_enabled_venues()]
+    return [venue_to_format(venue) for venue in get_enabled_venues()]

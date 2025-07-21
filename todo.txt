@@ -1,6 +1,10 @@
-
-[ ] scraping mechanism
-[ ] sqlite backend
-[ ] terminal interface (rich)
+[x] scraping mechanism
+[x] sqlite backend
+[x] terminal interface (rich)
 [ ] ical exporter (subscribing to a calendar)
 [ ] venue list generation
+[ ] only show dates after current time
+[ ] add a way to pin events that i want to go to 
+[x] fix the independent, scraper is broken
+[x] fix bottom of the hill, scraper is broken
+[ ] if cost isn't found, show nothing instead of "TBD"

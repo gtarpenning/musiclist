@@ -11,7 +11,7 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 - **Single source of truth** for all venue configurations
 - Eliminates duplicate config across main.py, music_calendar.py, tests
 - **VENUES_CONFIG**: List of venue dictionaries with name, base_url, calendar_path, scraper_class, enabled flag
-- **Functions**: get_enabled_venues(), get_venue_by_name(), get_legacy_venues_config()
+- **Functions**: get_enabled_venues(), get_venue_by_name()
 - Easy to add new venues: just add to VENUES_CONFIG array
 
 ### Unified CLI Interface (cli.py)
@@ -60,7 +60,6 @@ make help        # Comprehensive help with examples
 - **get_enabled_venues()**: Returns only venues with enabled=True
 - **venue_to_legacy_format()**: Converts new config to old {venue_data, scraper_class} format
 - **get_venue_by_name()**: Case-insensitive venue lookup
-- **get_legacy_venues_config()**: Backward compatibility wrapper
 
 ### cli.py
 - **setup_parser()**: Creates argparse with subcommands and help

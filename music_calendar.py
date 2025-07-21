@@ -7,7 +7,7 @@ from typing import List, Dict
 from models import Venue, Event
 from storage import Cache, Database
 from ui import Terminal
-from venues_config import get_legacy_venues_config
+from venues_config import get_venues_config
 
 
 class CalendarDisplay:
@@ -26,10 +26,15 @@ class CalendarDisplay:
         return current_month_start, next_next_month_start
 
     def filter_events_by_date(self, events: List[Event]) -> List[Event]:
-        """Filter events to show only current and next month"""
+        """Filter events to show only current and next month, and exclude past events"""
+        today = date.today()
         start_date, end_date = self.get_current_and_next_month_range()
 
-        return [event for event in events if start_date <= event.date < end_date]
+        return [
+            event
+            for event in events
+            if event.date >= today and start_date <= event.date < end_date
+        ]
 
     def scrape_venue(self, venue_data, scraper_class) -> List[Event]:
         """Scrape a single venue and return events"""
@@ -54,12 +59,12 @@ class CalendarDisplay:
 
             return filtered_events
         else:
-            self.terminal.show_error(f"No events found from {venue.name}")
+            # Silently handle venues with no events - don't print error messages
             return []
 
     def scrape_all_venues(self) -> tuple[List[Event], Dict[str, int]]:
         """Scrape all venues and return filtered events plus venue statistics"""
-        venues_config = get_legacy_venues_config()
+        venues_config = get_venues_config()
         all_events = []
         venue_stats = {}
 

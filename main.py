@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+from datetime import date
 from models import Venue
 from storage import Cache, Database
 from ui import Terminal
-from venues_config import get_legacy_venues_config
+from venues_config import get_venues_config
 
 
 def scrape_venue(venue_data, scraper_class, terminal, cache, db):
@@ -22,13 +23,19 @@ def scrape_venue(venue_data, scraper_class, terminal, cache, db):
         events = scraper.get_events()
 
     if events:
-        terminal.show_success(f"Found {len(events)} events from {venue.name}")
+        # Filter out past events
+        today = date.today()
+        future_events = [event for event in events if event.date >= today]
+
+        terminal.show_success(
+            f"Found {len(future_events)} upcoming events from {venue.name}"
+        )
 
         # Save to database
-        new_count = db.save_events(events)
+        new_count = db.save_events(events)  # Save all events to database
         terminal.show_info(f"Saved {new_count} new events to database")
 
-        return events
+        return future_events  # Return only future events for display
     else:
         terminal.show_error(f"No events found from {venue.name}")
         return []
@@ -44,7 +51,7 @@ def scrape_all_venues():
     db = Database()
 
     # Get venues from centralized config
-    venues_config = get_legacy_venues_config()
+    venues_config = get_venues_config()
 
     all_events = []
 

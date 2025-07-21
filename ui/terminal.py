@@ -1,5 +1,6 @@
 from datetime import date
 from typing import List, Dict
+import re
 
 from rich.console import Console
 from rich.table import Table
@@ -16,6 +17,65 @@ from venues_config import get_starred_venues
 class Terminal:
     def __init__(self):
         self.console = Console()
+
+    def format_cost(self, cost_str: str) -> str:
+        """Clean and format cost string by removing extra text and formatting ranges"""
+        if not cost_str or cost_str.lower() in ["tbd", "none"]:
+            return ""
+
+        if cost_str.lower() == "free":
+            return "Free"
+
+        # Extract all dollar amounts from the string
+        price_pattern = r"\$?(\d+(?:\.\d{2})?)"
+        prices = re.findall(price_pattern, cost_str)
+
+        if not prices:
+            return ""
+
+        # Convert to floats and remove duplicates
+        unique_prices = []
+        for price in prices:
+            price_float = float(price)
+            if price_float not in unique_prices:
+                unique_prices.append(price_float)
+
+        unique_prices.sort()
+
+        if len(unique_prices) == 1:
+            # Single price
+            price = (
+                int(unique_prices[0])
+                if unique_prices[0] == int(unique_prices[0])
+                else unique_prices[0]
+            )
+            return f"${price}"
+        elif len(unique_prices) == 2:
+            # Price range
+            min_price = (
+                int(unique_prices[0])
+                if unique_prices[0] == int(unique_prices[0])
+                else unique_prices[0]
+            )
+            max_price = (
+                int(unique_prices[1])
+                if unique_prices[1] == int(unique_prices[1])
+                else unique_prices[1]
+            )
+            return f"${min_price}-{max_price}"
+        else:
+            # Multiple prices, show range
+            min_price = (
+                int(unique_prices[0])
+                if unique_prices[0] == int(unique_prices[0])
+                else unique_prices[0]
+            )
+            max_price = (
+                int(unique_prices[-1])
+                if unique_prices[-1] == int(unique_prices[-1])
+                else unique_prices[-1]
+            )
+            return f"${min_price}-{max_price}"
 
     def display_events(self, events: List[Event], title: str = "Upcoming Events"):
         """Display events in a formatted table"""
@@ -36,7 +96,7 @@ class Terminal:
             time_str = event.time.strftime("%I:%M %p") if event.time else ""
             artists_str = event.artists_display
             venue_str = event.venue
-            cost_str = event.cost or "TBD"
+            cost_str = self.format_cost(event.cost or "TBD")
 
             # Truncate long artist names
             if len(artists_str) > 33:
@@ -50,7 +110,7 @@ class Terminal:
     def display_calendar_events(
         self, events: List[Event], title: str = "🎵 Upcoming Music Events"
     ):
-        """Display events in a calendar view with clickable links, day of week, weekend highlighting, and venue stars"""
+        """Display events in a calendar view with clickable links, day of week, weekend highlighting, venue stars, and day separators"""
         if not events:
             self.console.print("[yellow]No events found[/yellow]")
             return
@@ -66,7 +126,16 @@ class Terminal:
         # Get starred venues for icon display
         starred_venues = get_starred_venues()
 
-        for event in events:
+        current_date = None
+
+        for i, event in enumerate(events):
+            # Check if we need to add a day separator
+            if current_date and current_date != event.date:
+                # Add blank row between different days
+                table.add_row("", "", "", "", "")
+
+            current_date = event.date
+
             # Format date with day of week
             day_of_week = event.date.strftime("%a").upper()  # MON, TUE, etc.
             date_str = f"{day_of_week} {event.date.strftime('%b %d')}"
@@ -79,7 +148,7 @@ class Terminal:
                 date_str = f"[bold yellow]{date_str}[/bold yellow]"
 
             time_str = event.time.strftime("%I:%M %p") if event.time else "TBD"
-            cost_str = event.cost or "TBD"
+            cost_str = self.format_cost(event.cost or "TBD")
 
             # Add star icon for starred venues
             venue_str = event.venue
@@ -128,8 +197,6 @@ class Terminal:
         """Display a summary of venues and their event counts with starring info"""
         if not venue_stats:
             return
-
-        self.console.print("\n")
 
         # Create venue summary table
         venue_table = Table(
