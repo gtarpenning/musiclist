@@ -22,6 +22,7 @@ from scrapers.audio_nightclub import AudioNightclubScraper
 from scrapers.reverb import ReverbScraper
 from scrapers.public_works import PublicWorksScraper
 from scrapers.rickshaw_stop import RickshawStopScraper
+from scrapers.bimbos_365 import Bimbos365Scraper
 
 # Configuration file for storing user preferences
 USER_CONFIG_FILE = "user_config.json"
@@ -121,6 +122,14 @@ VENUES_CONFIG = [
         "base_url": "https://rickshawstop.com",
         "calendar_path": "/calendar/",
         "scraper_class": RickshawStopScraper,
+        "enabled": True,
+        "starred": False,
+    },
+    {
+        "name": "Bimbo's 365 Club",
+        "base_url": "https://bimbos365club.com",
+        "calendar_path": "/shows/",
+        "scraper_class": Bimbos365Scraper,
         "enabled": True,
         "starred": False,
     },

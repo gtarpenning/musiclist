@@ -11,6 +11,8 @@ class Event:
     venue: str
     url: str
     cost: Optional[str] = None
+    pinned: bool = False
+    id: Optional[int] = None
     created_at: Optional[datetime] = None
 
     def __post_init__(self):
@@ -39,6 +41,8 @@ class Event:
             "venue": self.venue,
             "url": self.url,
             "cost": self.cost,
+            "pinned": self.pinned,
+            "id": self.id,
             "created_at": self.created_at.isoformat(),
         }
 
@@ -52,5 +56,7 @@ class Event:
             venue=data["venue"],
             url=data["url"],
             cost=data.get("cost"),
+            pinned=data.get("pinned", False),
+            id=data.get("id"),
             created_at=datetime.fromisoformat(data["created_at"]),
         )

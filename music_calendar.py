@@ -92,11 +92,24 @@ class CalendarDisplay:
             )
             return
 
-        # Sort events by date and time
-        all_events.sort(key=lambda e: (e.date, e.time or datetime.min.time()))
+        # Separate pinned and unpinned events
+        pinned_events = [e for e in all_events if e.pinned]
+        unpinned_events = [e for e in all_events if not e.pinned]
 
-        # Display calendar view
-        self.terminal.display_calendar_events(all_events)
+        # Sort each group by date and time
+        pinned_events.sort(key=lambda e: (e.date, e.time or datetime.min.time()))
+        unpinned_events.sort(key=lambda e: (e.date, e.time or datetime.min.time()))
+
+        # Display unpinned events first
+        if unpinned_events:
+            self.terminal.display_calendar_events(
+                unpinned_events, "🗓️  Upcoming Events"
+            )
+
+        # Display pinned events at the bottom with special styling
+        if pinned_events:
+            print()  # Add spacing
+            self.terminal.display_calendar_events(pinned_events, "📌 Your Pinned Events")
 
         # Display venue summary
         self.terminal.display_venue_summary(venue_stats)

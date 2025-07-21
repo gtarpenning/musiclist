@@ -29,7 +29,6 @@ class IndependentScraper(BaseScraper):
                 )
                 if match:
                     events_js = match.group(1)
-
                     # Clean up the JavaScript to make it valid JSON
                     events_js = self._clean_js_for_json(events_js)
 
@@ -80,13 +79,16 @@ class IndependentScraper(BaseScraper):
                 # Parse the date
                 event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
+                # Create event URL with specific event ID
+                event_url = f"https://www.theindependentsf.com/calendar/#tw-event-dialog-{event_id}"
+
                 # Create event
                 event = Event(
                     date=event_date,
                     time=None,  # Time will be extracted separately
                     artists=[title.strip()],
                     venue="The Independent",
-                    url=f"https://www.theindependentsf.com/calendar/",  # Base URL as fallback
+                    url=event_url,
                 )
                 events.append(event)
             except (ValueError, TypeError):
@@ -127,8 +129,7 @@ class IndependentScraper(BaseScraper):
             event_url = "https://www.theindependentsf.com/calendar/"
             dialog_url = event_info.get("url", "")
             if dialog_url and dialog_url.startswith("#tw-event-dialog-"):
-                event_id = dialog_url.replace("#tw-event-dialog-", "")
-                event_url = f"https://www.theindependentsf.com/calendar/#{event_id}"
+                event_url = f"https://www.theindependentsf.com/calendar/{dialog_url}"
 
             # Create the event
             event = Event(

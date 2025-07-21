@@ -18,6 +18,9 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 - **music** (default: calendar view - current & next month)
 - **music calendar** (filtered events for current + next month)
 - **music scrape** (all upcoming events)
+- **music pin 5** or **music pin "Artist Name"** (pin events by number or artist name)
+- **music unpin 5** or **music unpin "Artist Name"** (unpin events by number or artist name)
+- **music pinned** (show all pinned events)
 - **music --list-venues** (show available venues)
 - **Pip package** with console script entry point for global access
 - **Argument parser** with help, subcommands, and examples
@@ -36,6 +39,15 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 - **display_venue_summary()**: Table showing event counts per venue with status indicators
 - **Better formatting**: Improved column widths, event truncation, cost display
 - **User tips**: "Click on event names to view details" guidance
+
+### Event Pinning System
+- **Persistent pinning**: Pinned status survives data refetches and scraping
+- **Dual pinning methods**: Pin by event number or artist name with fuzzy matching
+- **Separate display**: Pinned events shown in dedicated table at bottom with 📌 emoji
+- **Smart API**: `music pin <target>` where target can be number or "Artist Name" in quotes
+- **Database persistence**: save_events() preserves existing pinned status during updates
+- **Fuzzy search**: Artist name matching is case-insensitive and supports partial matches
+- **Conflict resolution**: Multiple matches show numbered list for disambiguation
 
 ### Dynamic Test Generation (tests/dynamic_venue_tests.py)
 - **Auto-generates test classes** from venues_config.py
@@ -62,17 +74,20 @@ make help        # Comprehensive help with examples
 - **get_venue_by_name()**: Case-insensitive venue lookup
 
 ### cli.py
-- **setup_parser()**: Creates argparse with subcommands and help
-- **show_calendar()**: Default behavior - filtered calendar view
+- **setup_parser()**: Creates argparse with pin/unpin/pinned subcommands and help
+- **show_calendar()**: Default behavior - filtered calendar view with separate pinned section
 - **show_full_scrape()**: All events view via main.scrape_all_venues()
 - **list_venues()**: Pretty-printed venue list with counts
-- **main()**: CLI entry point with command routing
+- **handle_pin_event()**: Pin events by number or fuzzy artist name matching
+- **handle_unpin_event()**: Unpin events by number or fuzzy artist name matching
+- **find_event_by_artist_name()**: Fuzzy search for events by artist name (case-insensitive)
+- **main()**: CLI entry point with command routing including new pinning subcommands
 
 ### music_calendar.py
 - **get_current_and_next_month_range()**: Returns start_date, end_date for filtering
 - **filter_events_by_date()**: Filters events to current + next month only
 - **scrape_venue()**: Enhanced with filtering and better user feedback
-- **display_calendar()**: Dynamic title showing actual month names
+- **display_calendar()**: Separates pinned and unpinned events into distinct tables with proper titles
 
 ### tests/dynamic_venue_tests.py
 - **create_venue_test_class()**: Creates test class from venue config using type()
@@ -110,9 +125,11 @@ make help        # Comprehensive help with examples
 - **_extract_artists()**: Main artist from h3.carousel_item_title_small, support from h4 "with X"
 
 ### storage/database.py
-- **save_events()**: Bulk insert with UNIQUE constraint duplicate handling. Returns new count
-- **_migrate_add_cost_column()**: Runtime schema migration for existing databases
-- **get_recent_events()**: Joins venues table, filters future dates only
+- **save_events()**: Bulk insert with duplicate handling that preserves pinned status. Returns new count
+- **pin_event()/unpin_event()**: Toggle pinned status by event ID with persistence
+- **get_pinned_events()**: Fetch all pinned events for dedicated display
+- **_migrate_add_pinned_column()**: Runtime schema migration adds pinned column to existing databases
+- **get_recent_events()**: Joins venues table, filters future dates, orders pinned events first
 
 ### storage/cache.py  
 - **_get_cache_key()**: MD5 of "venue:url" for filesystem-safe filenames
@@ -129,8 +146,9 @@ Each venue scraper implements 4 abstract methods:
 ## Database Schema
 ```sql
 venues: id, name, base_url, calendar_path, last_scraped
-events: venue_id, date, time, artists(CSV), url, cost, created_at
+events: venue_id, date, time, artists(CSV), url, cost, pinned, created_at
 UNIQUE constraint: (venue_id, date, artists, url) prevents duplicates
+INDEX: pinned column for fast pinned event queries
 ```
 
 ## Data Flow
@@ -170,6 +188,10 @@ make test                 # Run 14 dynamic tests
 music                     # Default: calendar view
 music calendar            # Same as above
 music scrape              # All events
+music pin 5               # Pin event number 5
+music pin "Arctic Monkeys"# Pin event by artist name
+music unpin 3             # Unpin event number 3
+music pinned              # Show all pinned events
 music --list-venues       # Show venues
 music --help              # Full help
 music --star-venue "The Warfield"       # Star a venue

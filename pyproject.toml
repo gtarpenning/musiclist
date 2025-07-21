@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sf-music-calendar"
-version = "0.1.7"
+version = "0.1.8"
 description = "Multi-venue music event scraper for San Francisco"
 authors = [
     {name = "Griffin Tarpenning", email = "gtarpenning@gmail.com"}
@@ -35,3 +35,13 @@ dev = [
     "build",
     "twine",
 ] 
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+# A regex preceded by ^/ will apply only to files and directories
+# in the root of the project.
+^/migrations/  # exclude a directory at the root of the project
+''' 

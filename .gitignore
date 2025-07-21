@@ -140,3 +140,5 @@ export/*.txt
 config/*.key
 config/*.secret
 config/local.py 
+
+*.db
