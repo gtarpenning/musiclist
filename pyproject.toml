@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sf-music-calendar"
-version = "0.1.8"
+version = "0.1.9"
 description = "Multi-venue music event scraper for San Francisco"
 authors = [
     {name = "Griffin Tarpenning", email = "gtarpenning@gmail.com"}
@@ -23,7 +23,7 @@ dependencies = [
 music = "cli:main"
 
 [tool.setuptools]
-py-modules = ["cli", "main", "music_calendar", "venues_config"]
+py-modules = ["cli", "venues_config"]
 
 [tool.setuptools.packages.find]
 include = ["models*", "scrapers*", "storage*", "ui*", "config*", "tests*"]

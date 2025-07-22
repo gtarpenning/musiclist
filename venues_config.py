@@ -3,7 +3,7 @@
 Centralized venue configuration for the musiclist project.
 
 This configuration is used by:
-- main.py and music_calendar.py for scraping
+- cli.py for scraping and calendar display
 - Test framework for automatic test generation
 - CLI for venue selection
 """
@@ -31,104 +31,78 @@ VENUES_CONFIG = [
         "base_url": "https://www.brickandmortarmusic.com",
         "calendar_path": "/calendar/",
         "scraper_class": BrickMortarScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "The Warfield",
         "base_url": "https://www.thewarfieldtheatre.com",
         "calendar_path": "/events/",
         "scraper_class": WarfieldScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Great American Music Hall",
         "base_url": "https://gamh.com",
         "calendar_path": "/calendar/",
         "scraper_class": GAMHScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Neck of the Woods",
         "base_url": "https://www.neckofthewoodssf.com",
         "calendar_path": "/calendar/",
         "scraper_class": NeckOfTheWoodsScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "The Regency Ballroom",
         "base_url": "https://www.theregencyballroom.com",
         "calendar_path": "/shows/",
         "scraper_class": RegencyBallroomScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "The Midway",
         "base_url": "https://themidwaysf.com",
         "calendar_path": "/events/",
         "scraper_class": MidwayScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "The Independent",
         "base_url": "https://www.theindependentsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": IndependentScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Bottom of the Hill",
         "base_url": "https://www.bottomofthehill.com",
         "calendar_path": "/calendar.html",
         "scraper_class": BottomOfTheHillScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Audio Nightclub",
         "base_url": "https://m.audiosf.com",
         "calendar_path": "/events/",
         "scraper_class": AudioNightclubScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Reverb",
         "base_url": "https://reverb-sf.com",
         "calendar_path": "/",
         "scraper_class": ReverbScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Public Works",
         "base_url": "https://publicsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": PublicWorksScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Rickshaw Stop",
         "base_url": "https://rickshawstop.com",
         "calendar_path": "/calendar/",
         "scraper_class": RickshawStopScraper,
-        "enabled": True,
-        "starred": False,
     },
     {
         "name": "Bimbo's 365 Club",
         "base_url": "https://bimbos365club.com",
         "calendar_path": "/shows/",
         "scraper_class": Bimbos365Scraper,
-        "enabled": True,
-        "starred": False,
     },
 ]
 
@@ -214,24 +188,6 @@ def get_venue_names():
     return [venue["name"] for venue in VENUES_CONFIG]
 
 
-def get_enabled_venue_names():
-    """Get list of enabled venue names"""
-    return [venue["name"] for venue in get_enabled_venues()]
-
-
-def venue_to_format(venue_config):
-    """Convert new config format to legacy format for backward compatibility"""
-    return {
-        "venue_data": {
-            "name": venue_config["name"],
-            "base_url": venue_config["base_url"],
-            "calendar_path": venue_config["calendar_path"],
-        },
-        "scraper_class": venue_config["scraper_class"],
-    }
-
-
-# For backward compatibility, provide the legacy format
 def get_venues_config():
-    """Get venues in legacy format for existing code"""
-    return [venue_to_format(venue) for venue in get_enabled_venues()]
+    """Get venues in new format"""
+    return VENUES_CONFIG

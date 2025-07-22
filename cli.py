@@ -10,15 +10,99 @@ import sys
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
-from main import scrape_all_venues
-from music_calendar import CalendarDisplay
+from models import Venue
+from storage import Cache, Database
+from ui import CalendarDisplay, Terminal
 from venues_config import (
-    get_enabled_venue_names,
+    get_venues_config,
     star_venue,
     unstar_venue,
-    get_venue_by_name,
+    get_venue_names,
 )
 from storage import Database
+
+
+def scrape_venue(venue_data, scraper_class, terminal, cache, db):
+    """Scrape a single venue and return events"""
+    venue = Venue(**venue_data)
+
+    # Save venue to database
+    db.save_venue(venue)
+    terminal.show_info(f"Initialized venue: {venue.name}")
+
+    # Create scraper
+    scraper = scraper_class(venue, cache)
+
+    # Scrape events with progress indicator
+    with terminal.show_scraping_progress(venue.name):
+        events = scraper.get_events()
+
+    if events:
+        # Filter out past events
+        today = date.today()
+        future_events = [event for event in events if event.date >= today]
+
+        terminal.show_success(
+            f"Found {len(future_events)} upcoming events from {venue.name}"
+        )
+
+        # Save to database
+        new_count = db.save_events(events)  # Save all events to database
+        terminal.show_info(f"Saved {new_count} new events to database")
+
+        return future_events  # Return only future events for display
+    else:
+        terminal.show_error(f"No events found from {venue.name}")
+        return []
+
+
+def scrape_all_venues():
+    """Main scraping function - scrapes all venues and displays results"""
+    terminal = Terminal()
+    terminal.show_header("🎵 Musiclist - Multi-Venue Scraper")
+
+    # Initialize components
+    cache = Cache()
+    db = Database()
+
+    # Get venues from centralized config
+    venues_config = get_venues_config()
+
+    all_events = []
+
+    # Scrape all venues
+    for config in venues_config:
+        events = scrape_venue(config, config["scraper_class"], terminal, cache, db)
+        all_events.extend(events)
+
+    # Display summary
+    if all_events:
+        terminal.show_success(
+            f"Total events found across all venues: {len(all_events)}"
+        )
+
+        # Display all events
+        terminal.display_events(all_events)
+
+        # Show sample output
+        from ui.colors import style
+
+        terminal.console.print(f"\n{style('Sample events from all venues:', 'dim')}")
+        for event in all_events[:10]:  # Show first 10
+            date_str = event.date.strftime("%B %d, %Y")
+            time_str = event.time.strftime("%I:%M %p") if event.time else "TBD"
+            artists_str = ", ".join(event.artists)
+            cost_str = f", {event.cost}" if event.cost else ""
+            terminal.console.print(
+                f"{date_str}, {artists_str}, {time_str}{cost_str}, {event.venue}, {event.url}"
+            )
+
+    else:
+        terminal.show_error("No events found from any venue")
+        terminal.show_info("This might be due to:")
+        terminal.console.print("  • Website structure changes")
+        terminal.console.print("  • Network connectivity issues")
+        terminal.console.print("  • No upcoming events posted")
 
 
 def setup_parser():
@@ -141,7 +225,7 @@ Data is cached for 24 hours. Pins are preserved during updates.
 
 def list_venues():
     """List all available venues"""
-    venues = get_enabled_venue_names()
+    venues = get_venue_names()
     db = Database()
     starred = db.get_starred_venues()
 
@@ -185,7 +269,7 @@ def handle_star_venue(venue_name: str):
         # Show available venues if venue not found
         if "not found" in message.lower():
             print("\nAvailable venues:")
-            for venue in get_enabled_venue_names():
+            for venue in get_venue_names():
                 print(f"  - {venue}")
 
 
@@ -384,7 +468,7 @@ def handle_unpin_event(target: str):
 def find_venue_by_fuzzy_name(venue_input: str):
     """Find venue by fuzzy matching name"""
     venue_input_lower = venue_input.lower()
-    available_venues = get_enabled_venue_names()
+    available_venues = get_venue_names()
 
     # First try exact match
     for venue_name in available_venues:
@@ -427,7 +511,7 @@ def handle_star_venue_command(venue_input: str):
     if venue_match is None:
         print(f"❌ No venue found matching '{venue_input}'")
         print("\nAvailable venues:")
-        for venue in get_enabled_venue_names():
+        for venue in get_venue_names():
             print(f"  - {venue}")
         return
 
@@ -458,7 +542,7 @@ def handle_unstar_venue_command(venue_input: str):
     if venue_match is None:
         print(f"❌ No venue found matching '{venue_input}'")
         print("\nAvailable venues:")
-        for venue in get_enabled_venue_names():
+        for venue in get_venue_names():
             print(f"  - {venue}")
         return
 
@@ -523,7 +607,7 @@ def show_venue_calendar(venue_name: str, force_refresh: bool = False):
     if venue_match is None:
         print(f"❌ No venue found matching '{venue_name}'")
         print("\nAvailable venues:")
-        for venue in get_enabled_venue_names():
+        for venue in get_venue_names():
             print(f"  - {venue}")
         return
 

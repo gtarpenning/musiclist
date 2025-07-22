@@ -9,7 +9,7 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 
 ### Centralized Venue Configuration (venues_config.py)
 - **Single source of truth** for all venue configurations
-- Eliminates duplicate config across main.py, music_calendar.py, tests
+- Eliminates duplicate config across cli.py, tests
 - **VENUES_CONFIG**: List of venue dictionaries with name, base_url, calendar_path, scraper_class, enabled flag
 - **Functions**: get_enabled_venues(), get_venue_by_name()
 - Easy to add new venues: just add to VENUES_CONFIG array
@@ -24,11 +24,11 @@ Multi-venue music event scraper for San Francisco venues. Scrapes events → SQL
 - **music --list-venues** (show available venues)
 - **Pip package** with console script entry point for global access
 - **Argument parser** with help, subcommands, and examples
-- **main.py integration**: now imports scrape_all_venues() for backward compatibility
+- **cli.py integration**: consolidated scraping functionality for cleaner architecture
 
 ### Smart Date Filtering
 - **Calendar mode**: Shows only current month + next month events by default
-- **music_calendar.py**: Uses python-dateutil for reliable date arithmetic
+- **ui/calendar.py**: Uses python-dateutil for reliable date arithmetic
 - **Filter logic**: get_current_and_next_month_range() → filter_events_by_date()
 - **User feedback**: "Found 47 total events" → "Showing 21 events for current and next month"
 - **Database**: Saves all events, displays filtered subset
@@ -69,8 +69,6 @@ make help        # Comprehensive help with examples
 
 ### venues_config.py
 - **VENUES_CONFIG**: Master list of all venue configurations with enabled flags
-- **get_enabled_venues()**: Returns only venues with enabled=True
-- **venue_to_legacy_format()**: Converts new config to old {venue_data, scraper_class} format
 - **get_venue_by_name()**: Case-insensitive venue lookup
 
 ### cli.py
@@ -83,7 +81,7 @@ make help        # Comprehensive help with examples
 - **find_event_by_artist_name()**: Fuzzy search for events by artist name (case-insensitive)
 - **main()**: CLI entry point with command routing including new pinning subcommands
 
-### music_calendar.py
+### ui/calendar.py (CalendarDisplay)
 - **get_current_and_next_month_range()**: Returns start_date, end_date for filtering
 - **filter_events_by_date()**: Filters events to current + next month only
 - **scrape_venue()**: Enhanced with filtering and better user feedback

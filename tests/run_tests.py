@@ -13,7 +13,8 @@ from rich.table import Table
 # Add project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from venues_config import get_enabled_venues, get_enabled_venue_names
+from venues_config import get_enabled_venues, get_venue_names
+from ui.colors import style
 
 console = Console()
 
@@ -32,7 +33,10 @@ def discover_and_run_tests(test_pattern="test_*.py"):
         from tests.dynamic_venue_tests import generated_classes
 
         console.print(
-            f"[blue]Loading {len(generated_classes)} dynamically generated venue test classes[/blue]"
+            style(
+                f"Loading {len(generated_classes)} dynamically generated venue test classes",
+                "info",
+            )
         )
 
         for test_class in generated_classes:
@@ -40,7 +44,7 @@ def discover_and_run_tests(test_pattern="test_*.py"):
             suite.addTest(class_suite)
 
     except ImportError as e:
-        console.print(f"[yellow]Warning: Could not load dynamic tests: {e}[/yellow]")
+        console.print(style(f"Warning: Could not load dynamic tests: {e}", "warning"))
 
     # Also load any remaining individual test files (for backward compatibility)
     for root, dirs, files in os.walk(start_dir):
@@ -63,7 +67,10 @@ def discover_and_run_tests(test_pattern="test_*.py"):
                         suite.addTest(module_suite)
                     except ImportError as e:
                         console.print(
-                            f"[yellow]Warning: Could not import {module_name}: {e}[/yellow]"
+                            style(
+                                f"Warning: Could not import {module_name}: {e}",
+                                "warning",
+                            )
                         )
                         continue
 
@@ -72,11 +79,11 @@ def discover_and_run_tests(test_pattern="test_*.py"):
 
     if test_count == 0:
         console.print(
-            f"[yellow]No tests found matching pattern: {test_pattern}[/yellow]"
+            style(f"No tests found matching pattern: {test_pattern}", "warning")
         )
         return False
 
-    console.print(f"[blue]Running {test_count} tests...[/blue]")
+    console.print(style(f"Running {test_count} tests...", "info"))
 
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
@@ -97,39 +104,43 @@ def display_test_summary(result):
     table.add_column("Status")
 
     # Success status
-    status = "[green]PASSED[/green]" if result.wasSuccessful() else "[red]FAILED[/red]"
+    status = (
+        style("PASSED", "success")
+        if result.wasSuccessful()
+        else style("FAILED", "error")
+    )
 
     table.add_row("Total Tests", str(result.testsRun), status)
     table.add_row(
         "Failures",
         str(len(result.failures)),
-        "[red]FAILED[/red]" if result.failures else "[green]NONE[/green]",
+        style("FAILED", "error") if result.failures else style("NONE", "success"),
     )
     table.add_row(
         "Errors",
         str(len(result.errors)),
-        "[red]ERROR[/red]" if result.errors else "[green]NONE[/green]",
+        style("ERROR", "error") if result.errors else style("NONE", "success"),
     )
 
     console.print(table)
 
     # Show detailed failures/errors if any
     if result.failures:
-        console.print("\n[red]FAILURES:[/red]")
+        console.print(f"\n{style('FAILURES:', 'error')}")
         for test, traceback in result.failures:
-            console.print(f"[red]• {test}[/red]")
-            console.print(f"[dim]{traceback}[/dim]\n")
+            console.print(style(f"• {test}", "error"))
+            console.print(f"{style(traceback, 'dim')}\n")
 
     if result.errors:
-        console.print("\n[red]ERRORS:[/red]")
+        console.print(f"\n{style('ERRORS:', 'error')}")
         for test, traceback in result.errors:
-            console.print(f"[red]• {test}[/red]")
-            console.print(f"[dim]{traceback}[/dim]\n")
+            console.print(style(f"• {test}", "error"))
+            console.print(f"{style(traceback, 'dim')}\n")
 
 
 def run_venue_specific_test(venue_name):
     """Run tests for a specific venue"""
-    console.print(f"[blue]Running tests for: {venue_name}[/blue]")
+    console.print(style(f"Running tests for: {venue_name}", "info"))
 
     # Import dynamic tests
     try:
@@ -146,7 +157,9 @@ def run_venue_specific_test(venue_name):
                 break
 
         if target_class is None:
-            console.print(f"[red]No test class found for venue: {venue_name}[/red]")
+            console.print(
+                style(f"No test class found for venue: {venue_name}", "error")
+            )
             return False
 
         # Run tests for this specific class
@@ -160,13 +173,13 @@ def run_venue_specific_test(venue_name):
         return result.wasSuccessful()
 
     except ImportError as e:
-        console.print(f"[red]Error loading dynamic tests: {e}[/red]")
+        console.print(style(f"Error loading dynamic tests: {e}", "error"))
         return False
 
 
 def generate_csv_for_venue(venue_name):
     """Generate CSV test data for a specific venue"""
-    console.print(f"[blue]Generating CSV test data for: {venue_name}[/blue]")
+    console.print(style(f"Generating CSV test data for: {venue_name}", "info"))
 
     # Find venue config
     venues = get_enabled_venues()
@@ -178,7 +191,7 @@ def generate_csv_for_venue(venue_name):
             break
 
     if venue_config is None:
-        console.print(f"[red]Venue not found: {venue_name}[/red]")
+        console.print(style(f"Venue not found: {venue_name}", "error"))
         return False
 
     # Import required modules
@@ -200,7 +213,7 @@ def generate_csv_for_venue(venue_name):
         events = scraper.get_events()
 
     if not events:
-        console.print(f"[yellow]No events found for {venue_name}[/yellow]")
+        console.print(style(f"No events found for {venue_name}", "warning"))
         return False
 
     # Generate CSV filename
@@ -229,20 +242,20 @@ def generate_csv_for_venue(venue_name):
                 ]
             )
 
-    console.print(f"[green]Generated {len(events)} events to {csv_file}[/green]")
+    console.print(style(f"Generated {len(events)} events to {csv_file}", "success"))
     return True
 
 
 def list_available_tests():
     """List all available venue tests"""
-    console.print("[blue]Available venue tests:[/blue]")
+    console.print(style("Available venue tests:", "info"))
 
-    venues = get_enabled_venue_names()
+    venues = get_venue_names()
     for i, venue in enumerate(venues, 1):
         console.print(f"  {i}. {venue}")
 
-    console.print(f"\n[dim]Total: {len(venues)} venue tests available[/dim]")
-    console.print("\n[dim]Usage examples:[/dim]")
+    console.print(f"\n{style(f'Total: {len(venues)} venue tests available', 'dim')}")
+    console.print(f"\n{style('Usage examples:', 'dim')}")
     console.print("  python tests/run_tests.py                    # Run all tests")
     console.print(
         "  python tests/run_tests.py brick_mortar       # Run specific venue tests"
@@ -293,8 +306,8 @@ def main():
                 break
 
         if venue_name is None:
-            console.print(f"[red]Unknown venue: {venue_arg}[/red]")
-            console.print("[yellow]Available venues:[/yellow]")
+            console.print(style(f"Unknown venue: {venue_arg}", "error"))
+            console.print(style("Available venues:", "warning"))
             for venue in venues:
                 safe_name = venue["name"].lower().replace(" ", "_").replace("&", "_")
                 console.print(f"  {safe_name} -> {venue['name']}")

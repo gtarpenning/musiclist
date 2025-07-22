@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from typing import List, Dict
 
 from models import Venue, Event
 from storage import Cache, Database
-from ui import Terminal
+from .terminal import Terminal
 from venues_config import get_venues_config
 
 
@@ -40,7 +38,13 @@ class CalendarDisplay:
         self, venue_data, scraper_class, force_refresh: bool = False
     ) -> List[Event]:
         """Scrape a single venue and return events. Uses cached data if fresh unless force_refresh is True."""
-        venue = Venue(**venue_data)
+        # Filter venue_data to only include fields expected by Venue dataclass
+        venue_fields = {
+            "name": venue_data["name"],
+            "base_url": venue_data["base_url"],
+            "calendar_path": venue_data["calendar_path"],
+        }
+        venue = Venue(**venue_fields)
         venue_name = venue.name
 
         # Save venue to database (needed for cache checking)
@@ -84,7 +88,7 @@ class CalendarDisplay:
         scraped_venues = []
 
         for config in venues_config:
-            venue_name = config["venue_data"]["name"]
+            venue_name = config["name"]
 
             # Check if this venue will use cache before calling scrape_venue
             if not force_refresh and self.db.is_venue_data_fresh(
@@ -94,11 +98,9 @@ class CalendarDisplay:
             else:
                 scraped_venues.append(venue_name)
 
-            events = self.scrape_venue(
-                config["venue_data"], config["scraper_class"], force_refresh
-            )
+            events = self.scrape_venue(config, config["scraper_class"], force_refresh)
             all_events.extend(events)
-            venue_stats[config["venue_data"]["name"]] = len(events)
+            venue_stats[config["name"]] = len(events)
 
         return all_events, venue_stats
 
@@ -139,7 +141,7 @@ class CalendarDisplay:
         venues_config = get_venues_config()
         venue_config = None
         for config in venues_config:
-            if config["venue_data"]["name"] == venue_name:
+            if config["name"] == venue_name:
                 venue_config = config
                 break
 
@@ -154,7 +156,7 @@ class CalendarDisplay:
 
         # Scrape only this venue
         events = self.scrape_venue(
-            venue_config["venue_data"], venue_config["scraper_class"], force_refresh
+            venue_config, venue_config["scraper_class"], force_refresh
         )
 
         if not events:
@@ -182,12 +184,3 @@ class CalendarDisplay:
         self.terminal.show_info(
             f"Showing events only from {venue_name}. Use 'music calendar' to see all venues."
         )
-
-
-def main():
-    calendar = CalendarDisplay()
-    calendar.display_calendar()
-
-
-if __name__ == "__main__":
-    main()
