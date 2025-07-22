@@ -1,17 +1,16 @@
 # Musiclist Project Makefile
 # Simple automation for development tasks
 
-.PHONY: help format test test-list install clean setup calendar scrape venues starred version-update build push publish-update
+.PHONY: help format test test-list install clean setup music version-update build push publish-update
 
 # Default target
 help:
 	@echo "🎵 Musiclist Project Makefile"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  calendar        - Show calendar view (current + next month)"
-	@echo "  scrape          - Scrape all venues and show all events"
-	@echo "  venues          - List all available venues"
-	@echo "  starred         - List starred venues"
+	@echo "🗓️  Calendar & Events:"
+	@echo "  music        - Show calendar view (current + next month)"
+	@echo ""
+	@echo "🔧 Development:"
 	@echo "  version-update  - Bump patch version (e.g. 0.1.5 -> 0.1.6)"
 	@echo "  build           - Build package for PyPI"
 	@echo "  push            - Publish package to PyPI"
@@ -22,21 +21,6 @@ help:
 	@echo "  install         - Install dependencies"
 	@echo "  setup           - Set up development environment"
 	@echo "  clean           - Clean up temporary files"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make calendar                           # Show events for July & August 2025"
-	@echo "  make scrape                            # Show all upcoming events"
-	@echo "  make venues                            # List Brick & Mortar Music Hall, The Warfield"
-	@echo "  make starred                           # List starred venues"
-	@echo "  make version-update                     # Bump version from 0.1.5 -> 0.1.6"
-	@echo "  make build                             # Build package (creates dist/)"
-	@echo "  make push                              # Publish to PyPI"
-	@echo "  make publish-update                     # Full release workflow"
-	@echo "  make test                              # Run all venue tests"
-	@echo "  music --help                           # Show CLI options"
-	@echo "  music --star-venue \"The Warfield\"        # Star a venue"
-	@echo "  music --unstar-venue \"The Warfield\"      # Unstar a venue"
-	@echo "  python tests/run_tests.py brick --generate  # Generate test data"
 
 # Format code using black
 format:
@@ -67,24 +51,9 @@ setup: install
 	@echo "✅ Development environment ready"
 
 # Show calendar view with all venues (current + next month)
-calendar:
+music:
 	@echo "🗓️  Loading music calendar..."
-	@music calendar
-
-# Scrape all venues and show all events
-scrape:
-	@echo "🎵 Scraping all venues..."
-	@music scrape
-
-# List all available venues
-venues:
-	@echo "📍 Available venues:"
-	@music --list-venues
-
-# List starred venues
-starred:
-	@echo "⭐ Starred venues:"
-	@music --list-starred
+	@music music
 
 # Clean up temporary files
 clean:
