@@ -287,7 +287,9 @@ def get_event_by_number(event_number: int):
     from datetime import datetime
 
     db = Database()
-    events = db.get_recent_events(50)  # Get same events as calendar view
+    events = db.get_recent_events(
+        1000
+    )  # Increase limit to get all events like calendar
 
     # Filter events the same way as calendar display
     calendar = CalendarDisplay()
@@ -312,7 +314,7 @@ def find_event_by_artist_name(artist_name: str):
     from datetime import datetime
 
     db = Database()
-    events = db.get_recent_events(50)
+    events = db.get_recent_events(1000)  # Increase limit to match get_event_by_number
 
     # Filter events the same way as calendar display
     calendar = CalendarDisplay()
