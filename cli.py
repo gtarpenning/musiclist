@@ -14,7 +14,6 @@ from main import scrape_all_venues
 from music_calendar import CalendarDisplay
 from venues_config import (
     get_enabled_venue_names,
-    get_starred_venues,
     star_venue,
     unstar_venue,
     get_venue_by_name,
@@ -29,16 +28,24 @@ def setup_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                      # Show calendar view (default)
+  %(prog)s                      # Show calendar view (uses cached data if fresh)
   %(prog)s calendar             # Show events for current and next month
+  %(prog)s calendar --force-refresh # Force scrape all venues (bypass cache)
   %(prog)s scrape               # Scrape all venues and show all events
+  %(prog)s venue rickshaw       # Show events only from Rickshaw Stop (fuzzy matching)
+  %(prog)s venue "great american" # Show events only from Great American Music Hall
   %(prog)s pin 5                # Pin event number 5
   %(prog)s pin "Arctic Monkeys" # Pin event by artist name
   %(prog)s unpin 3              # Unpin event number 3
   %(prog)s pinned               # Show all pinned events
+  %(prog)s star warfield        # Star a venue (fuzzy matching)
+  %(prog)s unstar warfield      # Unstar a venue
+  %(prog)s starred              # Show all starred venues
   %(prog)s --list-venues        # Show available venues
   %(prog)s --star-venue "The Warfield"     # Star a venue
   %(prog)s --unstar-venue "The Warfield"   # Unstar a venue
+
+Data is cached for 24 hours. Pins are preserved during updates.
         """,
     )
 
@@ -49,6 +56,25 @@ Examples:
     calendar_parser = subparsers.add_parser(
         "calendar",
         help="Show calendar view with events for current and next month (default)",
+    )
+    calendar_parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Force refresh by scraping all venues (bypasses 24-hour cache)",
+    )
+
+    # Venue filter command
+    venue_parser = subparsers.add_parser(
+        "venue", help="Show events from a specific venue (supports fuzzy matching)"
+    )
+    venue_parser.add_argument(
+        "venue_name",
+        help="Venue name (supports partial matches like 'rickshaw' for 'Rickshaw Stop')",
+    )
+    venue_parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Force refresh by scraping the venue (bypasses 24-hour cache)",
     )
 
     # Scrape command (full venue scraping)
@@ -68,8 +94,25 @@ Examples:
     )
     unpin_parser.add_argument("target", help="Event number or artist name to unpin")
 
+    # Star command
+    star_parser = subparsers.add_parser(
+        "star", help="Star a venue (supports fuzzy matching)"
+    )
+    star_parser.add_argument("venue_name", help="Venue name (supports partial matches)")
+
+    # Unstar command
+    unstar_parser = subparsers.add_parser(
+        "unstar", help="Unstar a venue (supports fuzzy matching)"
+    )
+    unstar_parser.add_argument(
+        "venue_name", help="Venue name (supports partial matches)"
+    )
+
     # Show pinned command
     pinned_parser = subparsers.add_parser("pinned", help="Show all pinned events")
+
+    # Show starred command
+    starred_parser = subparsers.add_parser("starred", help="Show all starred venues")
 
     # List venues option
     parser.add_argument(
@@ -99,7 +142,8 @@ Examples:
 def list_venues():
     """List all available venues"""
     venues = get_enabled_venue_names()
-    starred = get_starred_venues()
+    db = Database()
+    starred = db.get_starred_venues()
 
     print("🎵 Available Venues:")
     print()
@@ -114,7 +158,8 @@ def list_venues():
 
 def list_starred_venues():
     """List starred venues"""
-    starred = get_starred_venues()
+    db = Database()
+    starred = db.get_starred_venues()
 
     if not starred:
         print("⭐ No venues are currently starred")
@@ -160,17 +205,20 @@ def get_event_by_number(event_number: int):
     db = Database()
     events = db.get_recent_events(50)  # Get same events as calendar view
 
-    # Filter and sort events the same way as calendar display
+    # Filter events the same way as calendar display
     calendar = CalendarDisplay()
     filtered_events = calendar.filter_events_by_date(events)
-    # Sort by pinned DESC (pinned first), then by date, then by time
-    filtered_events.sort(
-        key=lambda e: (not e.pinned, e.date, e.time or datetime.min.time())
+
+    # Sort all events chronologically regardless of pin status
+    # Use event ID as secondary sort key for stable ordering when date/time are identical
+    ordered_events = sorted(
+        filtered_events,
+        key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
     )
 
     # The event number is 1-based
-    if 1 <= event_number <= len(filtered_events):
-        return filtered_events[event_number - 1]
+    if 1 <= event_number <= len(ordered_events):
+        return ordered_events[event_number - 1]
 
     return None
 
@@ -182,18 +230,22 @@ def find_event_by_artist_name(artist_name: str):
     db = Database()
     events = db.get_recent_events(50)
 
-    # Filter and sort events the same way as calendar display
+    # Filter events the same way as calendar display
     calendar = CalendarDisplay()
     filtered_events = calendar.filter_events_by_date(events)
-    filtered_events.sort(
-        key=lambda e: (not e.pinned, e.date, e.time or datetime.min.time())
+
+    # Sort all events chronologically regardless of pin status
+    # Use event ID as secondary sort key for stable ordering when date/time are identical
+    ordered_events = sorted(
+        filtered_events,
+        key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
     )
 
     # Fuzzy search for artist name (case insensitive, partial match)
     artist_lower = artist_name.lower()
     matches = []
 
-    for i, event in enumerate(filtered_events):
+    for i, event in enumerate(ordered_events):
         for artist in event.artists:
             if artist_lower in artist.lower():
                 matches.append((i + 1, event))  # 1-based indexing
@@ -329,6 +381,112 @@ def handle_unpin_event(target: str):
         )
 
 
+def find_venue_by_fuzzy_name(venue_input: str):
+    """Find venue by fuzzy matching name"""
+    venue_input_lower = venue_input.lower()
+    available_venues = get_enabled_venue_names()
+
+    # First try exact match
+    for venue_name in available_venues:
+        if venue_name.lower() == venue_input_lower:
+            return venue_name
+
+    # Then try partial matches
+    matches = []
+    for venue_name in available_venues:
+        venue_lower = venue_name.lower()
+        # Check if input is a substring of venue name
+        if venue_input_lower in venue_lower:
+            matches.append(venue_name)
+
+    if len(matches) == 1:
+        return matches[0]
+    elif len(matches) > 1:
+        return matches  # Return list for disambiguation
+
+    # Try matching individual words
+    venue_words = venue_input.lower().split()
+    word_matches = []
+    for venue_name in available_venues:
+        venue_name_lower = venue_name.lower()
+        if all(word in venue_name_lower for word in venue_words):
+            word_matches.append(venue_name)
+
+    if len(word_matches) == 1:
+        return word_matches[0]
+    elif len(word_matches) > 1:
+        return word_matches
+
+    return None
+
+
+def handle_star_venue_command(venue_input: str):
+    """Handle starring a venue with fuzzy matching"""
+    venue_match = find_venue_by_fuzzy_name(venue_input)
+
+    if venue_match is None:
+        print(f"❌ No venue found matching '{venue_input}'")
+        print("\nAvailable venues:")
+        for venue in get_enabled_venue_names():
+            print(f"  - {venue}")
+        return
+
+    if isinstance(venue_match, list):
+        print(f"🔍 Multiple venues found matching '{venue_input}':")
+        db = Database()
+        starred_venues = db.get_starred_venues()
+        for i, venue in enumerate(venue_match, 1):
+            starred = " ⭐" if venue in starred_venues else ""
+            print(f"  {i}. {venue}{starred}")
+        print(
+            f"💡 Be more specific: try 'music star {venue_match[0].split()[0].lower()}'"
+        )
+        return
+
+    # Single match found
+    success, message = star_venue(venue_match)
+    if success:
+        print(f"⭐ {message}")
+    else:
+        print(f"❌ {message}")
+
+
+def handle_unstar_venue_command(venue_input: str):
+    """Handle unstarring a venue with fuzzy matching"""
+    venue_match = find_venue_by_fuzzy_name(venue_input)
+
+    if venue_match is None:
+        print(f"❌ No venue found matching '{venue_input}'")
+        print("\nAvailable venues:")
+        for venue in get_enabled_venue_names():
+            print(f"  - {venue}")
+        return
+
+    if isinstance(venue_match, list):
+        print(f"🔍 Multiple venues found matching '{venue_input}':")
+        db = Database()
+        starred_venues = db.get_starred_venues()
+        for i, venue in enumerate(venue_match, 1):
+            starred = " ⭐" if venue in starred_venues else ""
+            print(f"  {i}. {venue}{starred}")
+        print(
+            f"💡 Be more specific: try 'music unstar {venue_match[0].split()[0].lower()}'"
+        )
+        return
+
+    # Single match found
+    success, message = unstar_venue(venue_match)
+    if success:
+        print(f"⭐ {message}")
+    else:
+        print(f"❌ {message}")
+
+
+def show_starred_venues():
+    """Show all starred venues"""
+    list_starred_venues()
+
+
 def show_pinned_events():
     """Show all pinned events"""
     from ui import Terminal
@@ -347,15 +505,43 @@ def show_pinned_events():
     terminal.display_calendar_events(pinned_events, "📌 Your Pinned Events")
 
 
-def show_calendar():
+def show_calendar(force_refresh: bool = False):
     """Show calendar view (current and next month)"""
     calendar = CalendarDisplay()
-    calendar.display_calendar()
+    calendar.display_calendar(force_refresh=force_refresh)
 
 
 def show_full_scrape():
     """Show full scraping results (all events)"""
     scrape_all_venues()
+
+
+def show_venue_calendar(venue_name: str, force_refresh: bool = False):
+    """Show calendar view filtered to a specific venue"""
+    venue_match = find_venue_by_fuzzy_name(venue_name)
+
+    if venue_match is None:
+        print(f"❌ No venue found matching '{venue_name}'")
+        print("\nAvailable venues:")
+        for venue in get_enabled_venue_names():
+            print(f"  - {venue}")
+        return
+
+    if isinstance(venue_match, list):
+        print(f"🔍 Multiple venues found matching '{venue_name}':")
+        db = Database()
+        starred_venues = db.get_starred_venues()
+        for i, venue in enumerate(venue_match, 1):
+            starred = " ⭐" if venue in starred_venues else ""
+            print(f"  {i}. {venue}{starred}")
+        print(
+            f"💡 Be more specific: try 'music venue {venue_match[0].split()[0].lower()}'"
+        )
+        return
+
+    # Single match found - show calendar for this venue
+    calendar = CalendarDisplay()
+    calendar.display_venue_calendar(venue_match, force_refresh=force_refresh)
 
 
 def main():
@@ -389,6 +575,25 @@ def main():
         show_pinned_events()
         return
 
+    # Handle starring subcommands
+    if args.command == "star":
+        handle_star_venue_command(args.venue_name)
+        return
+
+    if args.command == "unstar":
+        handle_unstar_venue_command(args.venue_name)
+        return
+
+    if args.command == "starred":
+        show_starred_venues()
+        return
+
+    # Handle venue filtering command
+    if args.command == "venue":
+        force_refresh = getattr(args, "force_refresh", False)
+        show_venue_calendar(args.venue_name, force_refresh=force_refresh)
+        return
+
     # Handle list venues option
     if args.list_venues:
         list_venues()
@@ -401,7 +606,8 @@ def main():
 
     # Handle specific commands
     if args.command == "calendar":
-        show_calendar()
+        force_refresh = getattr(args, "force_refresh", False)
+        show_calendar(force_refresh=force_refresh)
     elif args.command == "scrape":
         show_full_scrape()
     else:

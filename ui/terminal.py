@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.columns import Columns
 
 from models import Event
-from venues_config import get_starred_venues
+from storage import Database
 
 
 class Terminal:
@@ -125,7 +125,8 @@ class Terminal:
         table.add_column("Cost", style="yellow", width=15)
 
         # Get starred venues for icon display
-        starred_venues = get_starred_venues()
+        db = Database()
+        starred_venues = db.get_starred_venues()
 
         current_date = None
         event_counter = 0
@@ -163,6 +164,13 @@ class Terminal:
 
             # Create clickable event link
             artists_str = event.artists_display
+
+            # Format case based on pin status: lowercase for regular, uppercase for pinned
+            if event.pinned:
+                artists_str = artists_str.upper()
+            else:
+                artists_str = artists_str.lower()
+
             if len(artists_str) > 34:
                 artists_str = artists_str[:31] + "..."
 
@@ -236,7 +244,8 @@ class Terminal:
         venue_table.add_column("Status", style="green", width=15)
 
         # Get starred venues for display
-        starred_venues = get_starred_venues()
+        db = Database()
+        starred_venues = db.get_starred_venues()
 
         total_events = 0
         for venue_name, count in venue_stats.items():

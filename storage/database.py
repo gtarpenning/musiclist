@@ -28,6 +28,7 @@ class Database:
                     base_url TEXT NOT NULL,
                     calendar_path TEXT DEFAULT '/calendar/',
                     last_scraped TIMESTAMP,
+                    starred BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -50,40 +51,36 @@ class Database:
             """
             )
 
-            # Handle migration for existing databases
-            self._migrate_add_cost_column(conn)
-            self._migrate_add_pinned_column(conn)
-
-            # Create pinned index after ensuring column exists
+            # Create indexes after ensuring columns exist
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_events_pinned ON events (pinned)"
             )
-
-    def _migrate_add_cost_column(self, conn: sqlite3.Connection):
-        """Add cost column to existing events table if it doesn't exist"""
-        # Check if cost column exists
-        cursor = conn.execute("PRAGMA table_info(events)")
-        columns = [row[1] for row in cursor.fetchall()]
-
-        if "cost" not in columns:
-            conn.execute("ALTER TABLE events ADD COLUMN cost TEXT")
-
-    def _migrate_add_pinned_column(self, conn: sqlite3.Connection):
-        """Add pinned column to existing events table if it doesn't exist"""
-        cursor = conn.execute("PRAGMA table_info(events)")
-        columns = [row[1] for row in cursor.fetchall()]
-
-        if "pinned" not in columns:
-            conn.execute("ALTER TABLE events ADD COLUMN pinned BOOLEAN DEFAULT FALSE")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_venues_starred ON venues (starred)"
+            )
 
     def save_venue(self, venue: Venue) -> int:
-        """Save venue and return ID"""
+        """Save venue and return ID, preserving last_scraped timestamp"""
         with self.get_connection() as conn:
-            cursor = conn.execute(
-                "INSERT OR REPLACE INTO venues (name, base_url, calendar_path) VALUES (?, ?, ?)",
-                (venue.name, venue.base_url, venue.calendar_path),
-            )
-            return cursor.lastrowid
+            # Check if venue exists
+            existing = conn.execute(
+                "SELECT id, last_scraped FROM venues WHERE name = ?", (venue.name,)
+            ).fetchone()
+
+            if existing:
+                # Update existing venue but preserve last_scraped
+                cursor = conn.execute(
+                    "UPDATE venues SET base_url = ?, calendar_path = ? WHERE name = ?",
+                    (venue.base_url, venue.calendar_path, venue.name),
+                )
+                return existing[0]  # Return existing ID
+            else:
+                # Insert new venue
+                cursor = conn.execute(
+                    "INSERT INTO venues (name, base_url, calendar_path) VALUES (?, ?, ?)",
+                    (venue.name, venue.base_url, venue.calendar_path),
+                )
+                return cursor.lastrowid
 
     def get_venue_id(self, venue_name: str) -> Optional[int]:
         """Get venue ID by name"""
@@ -92,6 +89,66 @@ class Database:
                 "SELECT id FROM venues WHERE name = ?", (venue_name,)
             ).fetchone()
             return row[0] if row else None
+
+    def is_venue_data_fresh(self, venue_name: str, cache_hours: int = 24) -> bool:
+        """Check if venue data is fresh (scraped within cache_hours)"""
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT last_scraped FROM venues WHERE name = ?", (venue_name,)
+            ).fetchone()
+
+            if not row or not row[0]:
+                return False  # No data or never scraped
+
+            try:
+                last_scraped = datetime.fromisoformat(row[0])
+                cache_duration = datetime.now() - last_scraped
+                return cache_duration.total_seconds() < (cache_hours * 3600)
+            except (ValueError, TypeError):
+                return False  # Invalid timestamp
+
+    def get_cached_events_for_venue(self, venue_name: str) -> List[Event]:
+        """Get cached events for a specific venue"""
+        with self.get_connection() as conn:
+            # Check if pinned column exists first
+            cursor = conn.execute("PRAGMA table_info(events)")
+            columns = [row[1] for row in cursor.fetchall()]
+            has_pinned = "pinned" in columns
+
+            if has_pinned:
+                query = """
+                    SELECT e.date, e.time, e.artists, v.name as venue, e.url, e.cost,
+                           COALESCE(e.pinned, 0) as pinned, e.id
+                    FROM events e
+                    JOIN venues v ON e.venue_id = v.id
+                    WHERE v.name = ? AND e.date >= date('now')
+                    ORDER BY e.date, e.time
+                """
+            else:
+                query = """
+                    SELECT e.date, e.time, e.artists, v.name as venue, e.url, e.cost,
+                           0 as pinned, e.id
+                    FROM events e
+                    JOIN venues v ON e.venue_id = v.id
+                    WHERE v.name = ? AND e.date >= date('now')
+                    ORDER BY e.date, e.time
+                """
+
+            rows = conn.execute(query, (venue_name,)).fetchall()
+
+            events = []
+            for row in rows:
+                try:
+                    event_data = dict(row)
+                    # Add created_at if missing (for compatibility)
+                    if "created_at" not in event_data:
+                        event_data["created_at"] = datetime.now().isoformat()
+                    events.append(Event.from_dict(event_data))
+                except Exception:
+                    # Skip malformed events
+                    continue
+
+            return events
 
     def save_events(self, events: List[Event]) -> int:
         """Save events, return count of new events added. Preserves pinned status for existing events."""
@@ -262,14 +319,6 @@ class Database:
     def get_pinned_events(self) -> List[Event]:
         """Get all pinned events"""
         with self.get_connection() as conn:
-            # Check if pinned column exists first
-            cursor = conn.execute("PRAGMA table_info(events)")
-            columns = [row[1] for row in cursor.fetchall()]
-            has_pinned = "pinned" in columns
-
-            if not has_pinned:
-                return []  # No pinned events if column doesn't exist yet
-
             rows = conn.execute(
                 """
                 SELECT e.date, e.time, e.artists, v.name as venue, e.url, e.cost,
@@ -292,3 +341,37 @@ class Database:
                     continue
 
             return events
+
+    def star_venue(self, venue_name: str) -> bool:
+        """Star a venue by name"""
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE venues SET starred = TRUE WHERE name = ?", (venue_name,)
+            )
+            return cursor.rowcount > 0
+
+    def unstar_venue(self, venue_name: str) -> bool:
+        """Unstar a venue by name"""
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE venues SET starred = FALSE WHERE name = ?", (venue_name,)
+            )
+            return cursor.rowcount > 0
+
+    def get_starred_venues(self) -> List[str]:
+        """Get list of starred venue names"""
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT name FROM venues WHERE starred = TRUE ORDER BY name"
+            ).fetchall()
+
+            return [row[0] for row in rows]
+
+    def is_venue_starred(self, venue_name: str) -> bool:
+        """Check if a venue is starred"""
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT starred FROM venues WHERE name = ?", (venue_name,)
+            ).fetchone()
+
+            return bool(row[0]) if row else False

@@ -8,3 +8,7 @@
 [x] fix the independent, scraper is broken
 [x] fix bottom of the hill, scraper is broken
 [x] if cost isn't found, show nothing instead of "TBD"
+[ ] spotify link for each artist
+[x] bug with large visual space (and lag) after header before calendar
+[x] fix the cli so that "staring" works like pinning
+[x] add a way to just filter by venue, like "music rickshaw" (fuzzy matching)

@@ -8,8 +8,7 @@ This configuration is used by:
 - CLI for venue selection
 """
 
-import json
-import os
+
 from scrapers.brick_mortar import BrickMortarScraper
 from scrapers.warfield import WarfieldScraper
 from scrapers.gamh import GAMHScraper
@@ -24,8 +23,6 @@ from scrapers.public_works import PublicWorksScraper
 from scrapers.rickshaw_stop import RickshawStopScraper
 from scrapers.bimbos_365 import Bimbos365Scraper
 
-# Configuration file for storing user preferences
-USER_CONFIG_FILE = "user_config.json"
 
 # All venue configurations
 VENUES_CONFIG = [
@@ -136,31 +133,12 @@ VENUES_CONFIG = [
 ]
 
 
-def _load_user_config():
-    """Load user configuration from JSON file"""
-    if os.path.exists(USER_CONFIG_FILE):
-        try:
-            with open(USER_CONFIG_FILE, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return {}
-    return {}
-
-
-def _save_user_config(config):
-    """Save user configuration to JSON file"""
-    try:
-        with open(USER_CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=2)
-    except IOError:
-        pass  # Fail silently if we can't save
-
-
 def _get_venue_starred_status(venue_name):
-    """Get the starred status for a venue from user config"""
-    config = _load_user_config()
-    starred_venues = config.get("starred_venues", [])
-    return venue_name in starred_venues
+    """Get the starred status for a venue from database"""
+    from storage import Database
+
+    db = Database()
+    return db.is_venue_starred(venue_name)
 
 
 def get_enabled_venues():
@@ -187,44 +165,48 @@ def get_venue_by_name(name: str):
 
 def star_venue(venue_name: str):
     """Star a venue"""
+    from storage import Database
+
     venue = get_venue_by_name(venue_name)
     if not venue:
         return False, f"Venue '{venue_name}' not found"
 
-    config = _load_user_config()
-    starred_venues = config.get("starred_venues", [])
+    db = Database()
+    if db.is_venue_starred(venue["name"]):
+        return True, f"'{venue['name']}' is already starred"
 
-    if venue["name"] not in starred_venues:
-        starred_venues.append(venue["name"])
-        config["starred_venues"] = starred_venues
-        _save_user_config(config)
+    success = db.star_venue(venue["name"])
+    if success:
         return True, f"Starred '{venue['name']}'"
     else:
-        return True, f"'{venue['name']}' is already starred"
+        return False, f"Failed to star '{venue['name']}'"
 
 
 def unstar_venue(venue_name: str):
     """Unstar a venue"""
+    from storage import Database
+
     venue = get_venue_by_name(venue_name)
     if not venue:
         return False, f"Venue '{venue_name}' not found"
 
-    config = _load_user_config()
-    starred_venues = config.get("starred_venues", [])
+    db = Database()
+    if not db.is_venue_starred(venue["name"]):
+        return True, f"'{venue['name']}' was not starred"
 
-    if venue["name"] in starred_venues:
-        starred_venues.remove(venue["name"])
-        config["starred_venues"] = starred_venues
-        _save_user_config(config)
+    success = db.unstar_venue(venue["name"])
+    if success:
         return True, f"Unstarred '{venue['name']}'"
     else:
-        return True, f"'{venue['name']}' was not starred"
+        return False, f"Failed to unstar '{venue['name']}'"
 
 
 def get_starred_venues():
     """Get list of starred venue names"""
-    config = _load_user_config()
-    return config.get("starred_venues", [])
+    from storage import Database
+
+    db = Database()
+    return db.get_starred_venues()
 
 
 def get_venue_names():
