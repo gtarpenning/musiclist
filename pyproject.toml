@@ -26,7 +26,7 @@ music = "cli:main"
 py-modules = ["cli", "venues_config"]
 
 [tool.setuptools.packages.find]
-include = ["models*", "scrapers*", "storage*", "ui*", "config*", "tests*"]
+include = ["models*", "scrapers*", "storage*", "ui*", "utils*", "config*", "tests*"]
 
 [project.optional-dependencies]
 dev = [

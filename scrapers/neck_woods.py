@@ -13,29 +13,117 @@ class NeckOfTheWoodsScraper(BaseScraper):
         soup = BeautifulSoup(html_content, "html.parser")
         events = []
 
-        # Look for event containers - they appear to be in a list format based on the search results
-        # The calendar page shows events with date, time, artist, and cost info
-        event_containers = soup.find_all(
-            ["div", "article", "li"], class_=re.compile(r"event|show|concert", re.I)
-        )
+        # Be more specific about event containers to avoid duplicates
+        # Look for actual event containers first - try common event markup patterns
+        event_containers = []
 
-        # If no event containers found, try a broader search
-        if not event_containers:
-            # Look for any containers that might contain event information
-            potential_containers = soup.find_all(["div", "article", "section"])
-            for container in potential_containers:
+        # Try specific selectors that are more likely to be actual event containers
+        selectors_to_try = [
+            '[class*="event"]',  # Any class containing "event"
+            '[class*="show"]',  # Any class containing "show"
+            '[class*="concert"]',  # Any class containing "concert"
+            "article",  # Article tags often contain events
+            '[class*="listing"]',  # Event listings
+            '[class*="item"]',  # Event items
+        ]
+
+        for selector in selectors_to_try:
+            containers = soup.select(selector)
+            for container in containers:
                 text = container.get_text().lower()
-                if any(
-                    keyword in text for keyword in ["show:", "doors:", "pm", "am", "$"]
+                # Only include if it has event-like content
+                if (
+                    any(keyword in text for keyword in ["show:", "doors:", "pm", "am"])
+                    and len(text.strip()) > 20
                 ):
                     event_containers.append(container)
 
+        # If still no containers found, fall back to broader search but be more selective
+        if not event_containers:
+            potential_containers = soup.find_all(["div", "article", "section"])
+            for container in potential_containers:
+                text = container.get_text().lower()
+                # More strict criteria to avoid duplicates
+                if (
+                    any(keyword in text for keyword in ["show:", "doors:", "pm", "am"])
+                    and len(text.strip()) > 30  # Longer minimum text
+                    and ("$" in text or "free" in text)
+                ):  # Must have price info or be explicitly free
+                    event_containers.append(container)
+
+        # Parse events from selected containers
+        raw_events = []
         for element in event_containers:
             event = self._parse_single_event(element)
             if event:
-                events.append(event)
+                raw_events.append(event)
 
+        # Deduplicate events based on date, cleaned artists, and URL
+        events = self._deduplicate_events(raw_events)
         return events
+
+    def _deduplicate_events(self, events: List[Event]) -> List[Event]:
+        """Remove duplicate events based on date and URL, keeping the best version"""
+        # Group events by date and URL
+        groups = {}
+        for event in events:
+            key = (event.date, event.url)
+            if key not in groups:
+                groups[key] = []
+            groups[key].append(event)
+
+        deduplicated = []
+        for group in groups.values():
+            if len(group) == 1:
+                deduplicated.append(group[0])
+            else:
+                # Multiple events with same date/URL - pick the best one
+                best_event = self._pick_best_event(group)
+                deduplicated.append(best_event)
+
+        return deduplicated
+
+    def _pick_best_event(self, events: List[Event]) -> Event:
+        """Pick the best event from a group of duplicates with same date/URL"""
+        # Scoring criteria:
+        # 1. Fewer artists is often better (less likely to be a mega-list)
+        # 2. Artists without time prefixes are preferred
+        # 3. Avoid artists that are just times like "8:00PM"
+
+        scored_events = []
+        for event in events:
+            score = 0
+
+            # Count time-like artists (bad)
+            time_artists = len(
+                [
+                    a
+                    for a in event.artists
+                    if re.match(r"^\d{1,2}:\d{2}\s*(AM|PM)$", a, re.IGNORECASE)
+                ]
+            )
+            score -= time_artists * 10
+
+            # Prefer shorter artist lists (avoiding mega-lists)
+            if len(event.artists) <= 5:
+                score += 20
+            elif len(event.artists) <= 10:
+                score += 10
+            else:
+                score -= len(event.artists)  # Penalize very long lists
+
+            # Prefer events without time prefixes in artist names
+            clean_artists = 0
+            for artist in event.artists:
+                if not re.match(r"^\d{1,2}:\d{2}\s*(AM|PM)", artist, re.IGNORECASE):
+                    clean_artists += 1
+            score += clean_artists * 2
+
+            scored_events.append((score, event))
+
+        # Return the highest scoring event
+        scored_events.sort(key=lambda x: x[0], reverse=True)
+        return scored_events[0][1]
 
     def _parse_single_event(self, element) -> Optional[Event]:
         """Parse a single event from HTML element"""
@@ -131,11 +219,13 @@ class NeckOfTheWoodsScraper(BaseScraper):
             for line in lines:
                 # Look for lines that might be artist names (not dates, times, or prices)
                 if (
-                    not re.search(r"\d{1,2}:\d{2}", line)
-                    and not re.search(r"\$\d+", line)  # no times
-                    and not re.search(r"(doors|show|pm|am)", line, re.I)  # no prices
-                    and len(line) > 3  # no door/show times
-                ):  # reasonable length
+                    not re.search(r"\d{1,2}:\d{2}", line)  # no times
+                    and not re.search(r"\$\d+", line)  # no prices
+                    and not re.search(
+                        r"(doors|show|pm|am)", line, re.I
+                    )  # no door/show times
+                    and len(line) > 3  # reasonable length
+                ):
                     potential_artists = self.clean_artist_names(line)
                     if potential_artists:
                         artists.extend(

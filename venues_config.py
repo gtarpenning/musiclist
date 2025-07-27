@@ -26,7 +26,6 @@ from scrapers.rickshaw_stop import RickshawStopScraper
 from scrapers.bimbos_365 import Bimbos365Scraper
 from scrapers.gray_area import GrayAreaScraper
 from scrapers.chapel import ChapelScraper
-from scrapers.cafe_du_nord import CafeDuNordScraper
 
 
 # All venue configurations
@@ -120,12 +119,6 @@ VENUES_CONFIG = [
         "base_url": "https://thechapelsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": ChapelScraper,
-    },
-    {
-        "name": "Cafe Du Nord",
-        "base_url": "https://cafedunord.com",
-        "calendar_path": "/calendar/",
-        "scraper_class": CafeDuNordScraper,
     },
 ]
 
