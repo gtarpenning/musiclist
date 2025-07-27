@@ -24,7 +24,9 @@ from storage import Database
 
 def scrape_venue(venue_data, scraper_class, terminal, cache, db):
     """Scrape a single venue and return events"""
-    venue = Venue(**venue_data)
+    # Filter venue data to only include fields expected by Venue constructor
+    venue_fields = {k: v for k, v in venue_data.items() if k != "scraper_class"}
+    venue = Venue(**venue_fields)
 
     # Save venue to database
     db.save_venue(venue)
