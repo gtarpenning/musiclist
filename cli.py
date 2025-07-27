@@ -59,23 +59,23 @@ def scrape_venue(venue_data, scraper_class, terminal, cache, db):
 
 
 def scrape_all_venues():
-    """Main scraping function - scrapes all venues and displays results"""
+    """Main scraping function - scrapes all venues and displays results using parallel processing"""
     terminal = Terminal()
     terminal.show_header("🎵 Musiclist - Multi-Venue Scraper")
-
-    # Initialize components
-    cache = Cache()
-    db = Database()
 
     # Get venues from centralized config
     venues_config = get_venues_config()
 
-    all_events = []
+    # Use parallel scraper for faster performance
+    from utils.parallel import ParallelScraper
+    from venues_config import DEFAULT_MAX_WORKERS
 
-    # Scrape all venues
-    for config in venues_config:
-        events = scrape_venue(config, config["scraper_class"], terminal, cache, db)
-        all_events.extend(events)
+    parallel_scraper = ParallelScraper(max_workers=DEFAULT_MAX_WORKERS)
+
+    # Scrape all venues in parallel with progress bar
+    all_events, venue_stats = parallel_scraper.scrape_venues_parallel(
+        venues_config, force_refresh=True
+    )
 
     # Display summary
     if all_events:
@@ -126,7 +126,7 @@ Examples:
   %(prog)s pinned               # Show all pinned events
   %(prog)s star warfield        # Star a venue (fuzzy matching)
   %(prog)s unstar warfield      # Unstar a venue
-  %(prog)s starred              # Show all starred venues
+  %(prog)s starred              # Show events from starred venues + list starred venues
   %(prog)s --list-venues        # Show available venues
   %(prog)s --star-venue "The Warfield"     # Star a venue
   %(prog)s --unstar-venue "The Warfield"   # Unstar a venue
@@ -198,7 +198,9 @@ Data is cached for 24 hours. Pins are preserved during updates.
     pinned_parser = subparsers.add_parser("pinned", help="Show all pinned events")
 
     # Show starred command
-    starred_parser = subparsers.add_parser("starred", help="Show all starred venues")
+    starred_parser = subparsers.add_parser(
+        "starred", help="Show events from starred venues + list starred venues"
+    )
 
     # List venues option
     parser.add_argument(
@@ -572,7 +574,8 @@ def handle_unstar_venue_command(venue_input: str):
 
 def show_starred_venues():
     """Show all starred venues"""
-    list_starred_venues()
+    calendar = CalendarDisplay()
+    calendar.display_starred_venues_calendar()
 
 
 def show_pinned_events():

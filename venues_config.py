@@ -8,6 +8,8 @@ This configuration is used by:
 - CLI for venue selection
 """
 
+# Parallelism configuration
+DEFAULT_MAX_WORKERS = 5  # Number of venues to scrape in parallel
 
 from scrapers.brick_mortar import BrickMortarScraper
 from scrapers.warfield import WarfieldScraper
@@ -22,6 +24,9 @@ from scrapers.reverb import ReverbScraper
 from scrapers.public_works import PublicWorksScraper
 from scrapers.rickshaw_stop import RickshawStopScraper
 from scrapers.bimbos_365 import Bimbos365Scraper
+from scrapers.gray_area import GrayAreaScraper
+from scrapers.chapel import ChapelScraper
+from scrapers.cafe_du_nord import CafeDuNordScraper
 
 
 # All venue configurations
@@ -103,6 +108,24 @@ VENUES_CONFIG = [
         "base_url": "https://bimbos365club.com",
         "calendar_path": "/shows/",
         "scraper_class": Bimbos365Scraper,
+    },
+    {
+        "name": "Gray Area",
+        "base_url": "https://grayarea.org",
+        "calendar_path": "/visit/events/",
+        "scraper_class": GrayAreaScraper,
+    },
+    {
+        "name": "The Chapel",
+        "base_url": "https://thechapelsf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": ChapelScraper,
+    },
+    {
+        "name": "Cafe Du Nord",
+        "base_url": "https://cafedunord.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": CafeDuNordScraper,
     },
 ]
 

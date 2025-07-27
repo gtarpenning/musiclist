@@ -80,27 +80,19 @@ class CalendarDisplay:
     def scrape_all_venues(
         self, force_refresh: bool = False
     ) -> tuple[List[Event], Dict[str, int]]:
-        """Scrape all venues and return filtered events plus venue statistics"""
+        """Scrape all venues and return filtered events plus venue statistics using parallel processing"""
         venues_config = get_venues_config()
-        all_events = []
-        venue_stats = {}
-        cached_venues = []
-        scraped_venues = []
 
-        for config in venues_config:
-            venue_name = config["name"]
+        # Use parallel scraper for faster performance
+        from utils.parallel import ParallelScraper
+        from venues_config import DEFAULT_MAX_WORKERS
 
-            # Check if this venue will use cache before calling scrape_venue
-            if not force_refresh and self.db.is_venue_data_fresh(
-                venue_name, cache_hours=24
-            ):
-                cached_venues.append(venue_name)
-            else:
-                scraped_venues.append(venue_name)
+        parallel_scraper = ParallelScraper(max_workers=DEFAULT_MAX_WORKERS)
 
-            events = self.scrape_venue(config, config["scraper_class"], force_refresh)
-            all_events.extend(events)
-            venue_stats[config["name"]] = len(events)
+        # Scrape all venues in parallel with progress bar - this includes calendar date filtering
+        all_events, venue_stats = parallel_scraper.scrape_venues_for_calendar(
+            venues_config, force_refresh
+        )
 
         return all_events, venue_stats
 
@@ -183,4 +175,80 @@ class CalendarDisplay:
         # Show venue filtering tip
         self.terminal.show_info(
             f"Showing events only from {venue_name}. Use 'music calendar' to see all venues."
+        )
+
+    def display_starred_venues_calendar(self, force_refresh: bool = False):
+        """Display calendar view filtered to only starred venues, plus list of starred venues"""
+        start_date, end_date = self.get_current_and_next_month_range()
+        title = f"⭐ Starred Venues - {start_date.strftime('%B')} & {(start_date + relativedelta(months=1)).strftime('%B %Y')}"
+
+        self.terminal.show_header(title)
+
+        # Get starred venues
+        starred_venues = self.db.get_starred_venues()
+
+        if not starred_venues:
+            self.terminal.show_error("No venues are currently starred")
+            self.terminal.show_info('💡 Tip: Use "music star <venue>" to star a venue')
+            return
+
+        # Get venues config and filter to only starred venues
+        venues_config = get_venues_config()
+        starred_configs = [
+            config for config in venues_config if config["name"] in starred_venues
+        ]
+
+        if not starred_configs:
+            self.terminal.show_error("No starred venues found in configuration")
+            return
+
+        # Scrape only starred venues
+        all_events = []
+        venue_stats = {}
+
+        for config in starred_configs:
+            venue_name = config["name"]
+
+            # Check if this venue will use cache before calling scrape_venue
+            if not force_refresh and self.db.is_venue_data_fresh(
+                venue_name, cache_hours=24
+            ):
+                pass  # Will use cache
+
+            events = self.scrape_venue(config, config["scraper_class"], force_refresh)
+            all_events.extend(events)
+            venue_stats[config["name"]] = len(events)
+
+        if not all_events:
+            self.terminal.show_error(
+                "No events found from starred venues for the current and next month"
+            )
+            self.terminal.show_info(
+                "Your starred venues may not have events scheduled yet"
+            )
+        else:
+            # Sort all events chronologically with stable ordering
+            # Use event ID as secondary sort key for consistent numbering
+            all_events.sort(
+                key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0)
+            )
+
+            # Display events from starred venues
+            self.terminal.display_calendar_events(
+                all_events, "⭐ Events from Starred Venues"
+            )
+
+            # Display venue summary
+            self.terminal.display_venue_summary(venue_stats)
+
+        # Show list of starred venues below the events
+        self.terminal.console.print("\n⭐ Your Starred Venues:")
+        for i, venue in enumerate(starred_venues, 1):
+            event_count = venue_stats.get(venue, 0)
+            event_text = f" ({event_count} events)" if venue in venue_stats else ""
+            self.terminal.console.print(f"  {i}. {venue}{event_text}")
+
+        self.terminal.console.print(f"\nTotal: {len(starred_venues)} starred venues")
+        self.terminal.show_info(
+            'Use "music unstar <venue>" to unstar a venue or "music calendar" to see all venues'
         )

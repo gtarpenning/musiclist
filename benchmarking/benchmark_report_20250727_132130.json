@@ -1,0 +1,161 @@
+{
+  "benchmark_info": {
+    "timestamp": "2025-07-27T13:21:30.897131",
+    "total_venues": 16,
+    "python_version": "3.13.2 (main, Jul 21 2025, 18:58:43) [Clang 17.0.0 (clang-1700.0.13.5)]"
+  },
+  "summary": {
+    "successful_scrapers": 16,
+    "failed_scrapers": 0,
+    "success_rate": 100.0,
+    "average_time_seconds": 0.22285865247249603,
+    "total_events_found": 743
+  },
+  "results": [
+    {
+      "venue_name": "The Regency Ballroom",
+      "success": true,
+      "duration_seconds": 1.485201120376587,
+      "event_count": 57,
+      "error_message": "",
+      "url": "https://www.theregencyballroom.com/shows/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "The Midway",
+      "success": true,
+      "duration_seconds": 1.239964246749878,
+      "event_count": 72,
+      "error_message": "",
+      "url": "https://themidwaysf.com/events/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Cafe Du Nord",
+      "success": true,
+      "duration_seconds": 0.2667088508605957,
+      "event_count": 1,
+      "error_message": "",
+      "url": "https://cafedunord.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Bottom of the Hill",
+      "success": true,
+      "duration_seconds": 0.11652112007141113,
+      "event_count": 71,
+      "error_message": "",
+      "url": "https://www.bottomofthehill.com/calendar.html",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "The Independent",
+      "success": true,
+      "duration_seconds": 0.09919595718383789,
+      "event_count": 98,
+      "error_message": "",
+      "url": "https://www.theindependentsf.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Neck of the Woods",
+      "success": true,
+      "duration_seconds": 0.09237289428710938,
+      "event_count": 181,
+      "error_message": "",
+      "url": "https://www.neckofthewoodssf.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Great American Music Hall",
+      "success": true,
+      "duration_seconds": 0.06093597412109375,
+      "event_count": 73,
+      "error_message": "",
+      "url": "https://gamh.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Brick & Mortar Music Hall",
+      "success": true,
+      "duration_seconds": 0.05151176452636719,
+      "event_count": 50,
+      "error_message": "",
+      "url": "https://www.brickandmortarmusic.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Rickshaw Stop",
+      "success": true,
+      "duration_seconds": 0.03513765335083008,
+      "event_count": 10,
+      "error_message": "",
+      "url": "https://rickshawstop.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "The Chapel",
+      "success": true,
+      "duration_seconds": 0.033879995346069336,
+      "event_count": 10,
+      "error_message": "",
+      "url": "https://thechapelsf.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Bimbo's 365 Club",
+      "success": true,
+      "duration_seconds": 0.028314828872680664,
+      "event_count": 20,
+      "error_message": "",
+      "url": "https://bimbos365club.com/shows/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "The Warfield",
+      "success": true,
+      "duration_seconds": 0.013809919357299805,
+      "event_count": 20,
+      "error_message": "",
+      "url": "https://www.thewarfieldtheatre.com/events/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Gray Area",
+      "success": true,
+      "duration_seconds": 0.01330113410949707,
+      "event_count": 25,
+      "error_message": "",
+      "url": "https://grayarea.org/visit/events/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Public Works",
+      "success": true,
+      "duration_seconds": 0.011989116668701172,
+      "event_count": 24,
+      "error_message": "",
+      "url": "https://publicsf.com/calendar/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Audio Nightclub",
+      "success": true,
+      "duration_seconds": 0.008814096450805664,
+      "event_count": 24,
+      "error_message": "",
+      "url": "https://m.audiosf.com/events/",
+      "cache_hit": false
+    },
+    {
+      "venue_name": "Reverb",
+      "success": true,
+      "duration_seconds": 0.008079767227172852,
+      "event_count": 7,
+      "error_message": "",
+      "url": "https://reverb-sf.com/",
+      "cache_hit": false
+    }
+  ],
+  "failures": []
+}
