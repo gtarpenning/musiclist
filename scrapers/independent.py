@@ -2,7 +2,6 @@ from datetime import datetime, date, time as dt_time
 from typing import List, Optional
 from bs4 import BeautifulSoup
 import re
-import json
 
 from models import Event
 from .base import BaseScraper
@@ -16,7 +15,6 @@ class IndependentScraper(BaseScraper):
 
         # Find the script tag containing event data
         scripts = soup.find_all("script")
-        event_data = None
 
         for script in scripts:
             if script.string and "all_events" in script.string:
@@ -29,107 +27,74 @@ class IndependentScraper(BaseScraper):
                 )
                 if match:
                     events_js = match.group(1)
-                    # Clean up the JavaScript to make it valid JSON
-                    events_js = self._clean_js_for_json(events_js)
-
-                    try:
-                        event_data = json.loads(events_js)
-                        break
-                    except json.JSONDecodeError as e:
-                        # If JSON parsing fails, try to extract individual events
-                        events = self._parse_js_events_fallback(script_content)
-                        return events
-
-        if event_data:
-            # Parse each event from the extracted data
-            for event_info in event_data:
-                event = self._parse_js_event(event_info)
-                if event:
-                    events.append(event)
+                    # Parse individual JavaScript objects directly using regex
+                    events = self._parse_js_events_regex(events_js)
+                    return events
 
         return events
 
-    def _clean_js_for_json(self, js_string: str) -> str:
-        """Clean JavaScript array to make it valid JSON"""
-        # Remove JavaScript comments
-        js_string = re.sub(r"//.*?$", "", js_string, flags=re.MULTILINE)
-
-        # Remove trailing commas before closing brackets/braces
-        js_string = re.sub(r",(\s*[}\]])", r"\1", js_string)
-
-        # Fix unquoted keys (JavaScript allows unquoted keys, JSON doesn't)
-        js_string = re.sub(r"(\w+):", r'"\1":', js_string)
-
-        # Fix single quotes to double quotes
-        js_string = re.sub(r"'([^']*)'", r'"\1"', js_string)
-
-        return js_string
-
-    def _parse_js_events_fallback(self, script_content: str) -> List[Event]:
-        """Fallback method to parse events using regex if JSON parsing fails"""
+    def _parse_js_events_regex(self, events_js: str) -> List[Event]:
+        """Parse JavaScript events using regex instead of JSON conversion"""
         events = []
 
-        # Find individual event objects using regex
-        event_pattern = r'\{\s*id:\s*[\'"](\d+)[\'"],.*?start:\s*[\'"]([^\'\"]+)[\'"],.*?title:\s*[\'"]([^\'\"]+)[\'"].*?\}'
-        matches = re.findall(event_pattern, script_content, re.DOTALL)
+        # Find all event objects using regex
+        # Match opening brace, capture everything until matching closing brace
+        event_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+        event_matches = re.findall(event_pattern, events_js, re.DOTALL)
 
-        for match in matches:
-            event_id, start_date, title = match
-            try:
-                # Parse the date
-                event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-
-                # Create event URL with specific event ID
-                event_url = f"https://www.theindependentsf.com/calendar/#tw-event-dialog-{event_id}"
-
-                # Create event
-                event = Event(
-                    date=event_date,
-                    time=None,  # Time will be extracted separately
-                    artists=[title.strip()],
-                    venue="The Independent",
-                    url=event_url,
-                )
+        for event_str in event_matches:
+            event = self._parse_single_js_event_regex(event_str)
+            if event:
                 events.append(event)
-            except (ValueError, TypeError):
-                continue
 
         return events
 
-    def _parse_js_event(self, event_info: dict) -> Optional[Event]:
-        """Parse a single event from JavaScript event data"""
+    def _parse_single_js_event_regex(self, event_str: str) -> Optional[Event]:
+        """Parse a single JavaScript event object using regex"""
         try:
-            # Extract date
-            start_date = event_info.get("start", "")
-            if not start_date:
+            # Extract ID
+            id_match = re.search(r"id:\s*['\"](\d+)['\"]", event_str)
+            event_id = id_match.group(1) if id_match else None
+
+            # Extract start date
+            start_match = re.search(r"start:\s*['\"]([^'\"]+)['\"]", event_str)
+            if not start_match:
                 return None
 
+            start_date = start_match.group(1)
             event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
-            # Extract title/artist
-            title = event_info.get("title", "").strip()
-            if not title:
+            # Extract title
+            title_match = re.search(r"title:\s*['\"]([^'\"]+)['\"]", event_str)
+            if not title_match:
                 return None
 
-            # Clean up HTML entities in title
+            title = title_match.group(1).strip()
             title = self._clean_html_entities(title)
             artists = [title]
 
-            # Extract time from doors or displayTime
+            # Extract time information from doors and displayTime
             event_time = None
-            doors_text = event_info.get("doors", "")
-            display_time = event_info.get("displayTime", "")
 
-            # Try to extract time from either doors or show time
-            time_text = doors_text or display_time
-            if time_text:
-                event_time = self._extract_time_from_text(time_text)
+            # Try doors first
+            doors_match = re.search(r"doors:\s*['\"]([^'\"]*)['\"]", event_str)
+            if doors_match:
+                doors_text = doors_match.group(1)
+                event_time = self._extract_time_from_text(doors_text)
 
-            # Create event URL - use the dialog ID if available
+            # If no time from doors, try displayTime
+            if not event_time:
+                display_match = re.search(
+                    r"displayTime:\s*['\"]([^'\"]*)['\"]", event_str
+                )
+                if display_match:
+                    display_text = display_match.group(1)
+                    event_time = self._extract_time_from_text(display_text)
+
+            # Create event URL
             event_url = "https://www.theindependentsf.com/calendar/"
-            dialog_url = event_info.get("url", "")
-            if dialog_url and dialog_url.startswith("#tw-event-dialog-"):
-                event_url = f"https://www.theindependentsf.com/calendar/{dialog_url}"
+            if event_id:
+                event_url = f"https://www.theindependentsf.com/calendar/#tw-event-dialog-{event_id}"
 
             # Create the event
             event = Event(
@@ -142,7 +107,7 @@ class IndependentScraper(BaseScraper):
 
             return event
 
-        except (ValueError, TypeError, KeyError) as e:
+        except (ValueError, TypeError) as e:
             return None
 
     def _clean_html_entities(self, text: str) -> str:

@@ -14,23 +14,39 @@ class MidwayScraper(BaseScraper):
         # The Midway uses a JSON API, so we'll fetch directly from the API endpoint
         api_url = urljoin(self.venue.base_url, "wp-json/tixr/v1/events")
 
-        try:
-            # Fetch JSON data from API
-            response = requests.get(api_url, headers=self.headers, timeout=10)
-            response.raise_for_status()
+        # Use tighter timeout and retry logic for external API calls
+        timeout = 2
+        max_retries = 2
 
-            events_data = response.json()
+        for attempt in range(max_retries):
+            try:
+                # Fetch JSON data from API
+                response = requests.get(api_url, headers=self.headers, timeout=timeout)
+                response.raise_for_status()
 
-            if not isinstance(events_data, list):
-                print(f"Unexpected API response format from {self.venue.name}")
-                return []
+                events_data = response.json()
 
-        except requests.RequestException as e:
-            print(f"Error fetching JSON data from {api_url}: {e}")
-            return []
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON data from {api_url}: {e}")
-            return []
+                if not isinstance(events_data, list):
+                    print(f"Unexpected API response format from {self.venue.name}")
+                    return []
+
+                break  # Success, exit retry loop
+
+            except (requests.RequestException, json.JSONDecodeError) as e:
+                if attempt == max_retries - 1:  # Last attempt
+                    print(
+                        f"Error fetching JSON data from {api_url} after {max_retries} attempts: {e}"
+                    )
+                    return []
+                else:
+                    # Exponential backoff: wait 0.5s, then 1s
+                    import time
+
+                    wait_time = 0.5 * (2**attempt)
+                    print(
+                        f"Attempt {attempt + 1} failed for {api_url}, retrying in {wait_time}s..."
+                    )
+                    time.sleep(wait_time)
 
         events = []
         for event_data in events_data:

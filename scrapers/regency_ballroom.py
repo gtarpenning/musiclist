@@ -44,23 +44,39 @@ class RegencyBallroomScraper(BaseScraper):
         """Fetch and parse events from JSON API"""
         import requests
         from datetime import datetime
+        import time
 
-        try:
-            response = requests.get(json_url, headers=self.headers, timeout=10)
-            response.raise_for_status()
-            json_data = response.json()
+        # Use much tighter timeout for external API calls
+        timeout = 2
+        max_retries = 2
 
-            events = []
-            for event_data in json_data.get("events", []):
-                event = self._parse_json_event(event_data)
-                if event:
-                    events.append(event)
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(json_url, headers=self.headers, timeout=timeout)
+                response.raise_for_status()
+                json_data = response.json()
 
-            return events
+                events = []
+                for event_data in json_data.get("events", []):
+                    event = self._parse_json_event(event_data)
+                    if event:
+                        events.append(event)
 
-        except Exception as e:
-            print(f"Error fetching JSON from {json_url}: {e}")
-            return []
+                return events
+
+            except (requests.RequestException, ValueError) as e:
+                if attempt == max_retries - 1:  # Last attempt
+                    print(
+                        f"Error fetching JSON from {json_url} after {max_retries} attempts: {e}"
+                    )
+                    return []
+                else:
+                    # Exponential backoff: wait 0.5s, then 1s
+                    wait_time = 0.5 * (2**attempt)
+                    print(
+                        f"Attempt {attempt + 1} failed for {json_url}, retrying in {wait_time}s..."
+                    )
+                    time.sleep(wait_time)
 
     def _parse_json_event(self, event_data: dict) -> Optional[Event]:
         """Parse a single event from JSON data"""

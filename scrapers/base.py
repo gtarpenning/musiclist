@@ -36,7 +36,7 @@ class BaseScraper(ABC):
         # Fetch from web with retry logic
         for attempt in range(3):
             try:
-                response = requests.get(target_url, headers=self.headers, timeout=10)
+                response = requests.get(target_url, headers=self.headers, timeout=5)
                 response.raise_for_status()
 
                 content = response.text
