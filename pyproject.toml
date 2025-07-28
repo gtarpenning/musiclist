@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sf-music-calendar"
-version = "0.1.14"
+version = "0.1.15"
 description = "Multi-venue music event scraper for San Francisco"
 authors = [
     {name = "Griffin Tarpenning", email = "gtarpenning@gmail.com"}
