@@ -113,10 +113,11 @@ class CalendarDisplay:
             )
             return
 
-        # Sort all events chronologically with stable ordering
+        # Sort all events reverse chronologically with stable ordering (closest events at bottom)
         # Use event ID as secondary sort key for consistent numbering
         all_events.sort(
-            key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0)
+            key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
+            reverse=True,
         )
 
         # Display all events together in chronological order with pin indicators
@@ -160,9 +161,12 @@ class CalendarDisplay:
             )
             return
 
-        # Sort all events chronologically with stable ordering
+        # Sort all events reverse chronologically with stable ordering (closest events at bottom)
         # Use event ID as secondary sort key for consistent numbering
-        events.sort(key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0))
+        events.sort(
+            key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
+            reverse=True,
+        )
 
         # Display events with venue-specific title
         calendar_title = f"🎵 {venue_name} Events"
@@ -227,10 +231,11 @@ class CalendarDisplay:
                 "Your starred venues may not have events scheduled yet"
             )
         else:
-            # Sort all events chronologically with stable ordering
+            # Sort all events reverse chronologically with stable ordering (closest events at bottom)
             # Use event ID as secondary sort key for consistent numbering
             all_events.sort(
-                key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0)
+                key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
+                reverse=True,
             )
 
             # Display events from starred venues

@@ -299,11 +299,12 @@ def get_event_by_number(event_number: int):
     calendar = CalendarDisplay()
     filtered_events = calendar.filter_events_by_date(events)
 
-    # Sort all events chronologically regardless of pin status
+    # Sort all events reverse chronologically regardless of pin status (closest events at bottom)
     # Use event ID as secondary sort key for stable ordering when date/time are identical
     ordered_events = sorted(
         filtered_events,
         key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
+        reverse=True,
     )
 
     # The event number is 1-based
@@ -324,11 +325,12 @@ def find_event_by_artist_name(artist_name: str):
     calendar = CalendarDisplay()
     filtered_events = calendar.filter_events_by_date(events)
 
-    # Sort all events chronologically regardless of pin status
+    # Sort all events reverse chronologically regardless of pin status (closest events at bottom)
     # Use event ID as secondary sort key for stable ordering when date/time are identical
     ordered_events = sorted(
         filtered_events,
         key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
+        reverse=True,
     )
 
     # Fuzzy search for artist name (case insensitive, partial match)
