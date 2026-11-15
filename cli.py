@@ -7,104 +7,143 @@ Provides both full venue scraping and filtered calendar views.
 
 import argparse
 import sys
-from datetime import date
-from dateutil.relativedelta import relativedelta
+import time
 
-from models import Venue
 from storage import Cache, Database
 from ui import CalendarDisplay, Terminal
+from ui.calendar import event_numbers, numbered_calendar_events
 from venues_config import (
+    DEFAULT_MAX_WORKERS,
+    fold,
+    get_venue_names,
     get_venues_config,
     star_venue,
     unstar_venue,
-    get_venue_names,
 )
-from storage import Database
-
-
-def scrape_venue(venue_data, scraper_class, terminal, cache, db):
-    """Scrape a single venue and return events"""
-    # Filter venue data to only include fields expected by Venue constructor
-    venue_fields = {k: v for k, v in venue_data.items() if k != "scraper_class"}
-    venue = Venue(**venue_fields)
-
-    # Save venue to database
-    db.save_venue(venue)
-    terminal.show_info(f"Initialized venue: {venue.name}")
-
-    # Create scraper
-    scraper = scraper_class(venue, cache)
-
-    # Scrape events with progress indicator
-    with terminal.show_scraping_progress(venue.name):
-        events = scraper.get_events()
-
-    if events:
-        # Filter out past events
-        today = date.today()
-        future_events = [event for event in events if event.date >= today]
-
-        terminal.show_success(
-            f"Found {len(future_events)} upcoming events from {venue.name}"
-        )
-
-        # Save to database
-        new_count = db.save_events(events)  # Save all events to database
-        terminal.show_info(f"Saved {new_count} new events to database")
-
-        return future_events  # Return only future events for display
-    else:
-        terminal.show_error(f"No events found from {venue.name}")
-        return []
 
 
 def scrape_all_venues():
-    """Main scraping function - scrapes all venues and displays results using parallel processing"""
+    """Force-refresh every venue and list all upcoming events (not just the calendar window)"""
+    from utils.parallel import refresh_venues
+
     terminal = Terminal()
     terminal.show_header("🎵 Musiclist - Multi-Venue Scraper")
 
-    # Get venues from centralized config
-    venues_config = get_venues_config()
-
-    # Use parallel scraper for faster performance
-    from utils.parallel import ParallelScraper
-    from venues_config import DEFAULT_MAX_WORKERS
-
-    parallel_scraper = ParallelScraper(max_workers=DEFAULT_MAX_WORKERS)
-
-    # Scrape all venues in parallel with progress bar
-    all_events, venue_stats = parallel_scraper.scrape_venues_parallel(
-        venues_config, force_refresh=True
+    db = Database()
+    results = refresh_venues(
+        get_venues_config(),
+        force_refresh=True,
+        max_workers=DEFAULT_MAX_WORKERS,
+        db=db,
+        console=terminal.console,
     )
+    all_events = db.get_events(venues=get_venue_names())
 
-    # Display summary
     if all_events:
         terminal.show_success(
-            f"Total events found across all venues: {len(all_events)}"
+            f"Total upcoming events across all venues: {len(all_events)}"
         )
-
-        # Display all events
         terminal.display_events(all_events)
-
-        # Show sample output
-        from ui.colors import style
-
-        terminal.console.print(f"\n{style('Sample events from all venues:', 'dim')}")
-        for event in all_events[:10]:  # Show first 10
-            date_str = event.date.strftime("%B %d, %Y")
-            time_str = event.time.strftime("%I:%M %p") if event.time else "TBD"
-            artists_str = ", ".join(event.artists)
-            cost_str = f", {event.cost}" if event.cost else ""
-            terminal.console.print(
-                f"{date_str}, {artists_str}, {time_str}{cost_str}, {event.venue}, {event.url}"
-            )
-
     else:
         terminal.show_error("No events found from any venue")
-        terminal.show_info("This might be due to:")
-        terminal.console.print("  • Website structure changes")
-        terminal.console.print("  • Network connectivity issues")
-        terminal.console.print("  • No upcoming events posted")
+    terminal.display_venue_summary(
+        {n: r.count for n, r in results.items()}, statuses=results
+    )
+
+
+def tls_hint(results, openssl_version=None):
+    """Explain 403s that come from an outdated TLS stack rather than the site.
+
+    Cloudflare-protected venue sites (Rickshaw Stop, as of 2026-11) reject
+    OpenSSL 1.x handshakes whatever the headers, so on an old Python the
+    venue fails every time while working fine on a current one.
+    """
+    import ssl
+
+    openssl_version = openssl_version or ssl.OPENSSL_VERSION
+    if not openssl_version.startswith("OpenSSL 1."):
+        return None
+    blocked = [name for name, r in results.items() if r.error and "HTTP 403" in r.error]
+    if not blocked:
+        return None
+    return (
+        f"{', '.join(blocked)} refused this Python's TLS stack "
+        f"(Python {sys.version.split()[0]}, {openssl_version.split('  ')[0]}). "
+        "Reinstall musiclist under Python 3.12+ (newer OpenSSL) to fix."
+    )
+
+
+def run_doctor(venue_filter: str = None) -> int:
+    """Live health check: scrape each venue now (no caches, nothing saved) and report what parsed.
+
+    Returns a process exit code: 0 if every checked venue produced upcoming events.
+    """
+    from rich.table import Table
+
+    from ui.colors import style
+    from utils.parallel import refresh_venues
+
+    terminal = Terminal()
+    configs = get_venues_config()
+    if venue_filter:
+        match = find_venue_by_fuzzy_name(venue_filter)
+        names = match if isinstance(match, list) else [match] if match else []
+        configs = [c for c in configs if c["name"] in names]
+        if not configs:
+            print(f"❌ No venue found matching '{venue_filter}'")
+            return 2
+
+    terminal.show_header(f"🩺 Scraper health check - {len(configs)} venues")
+    started = time.time()
+    results = refresh_venues(
+        configs,
+        force_refresh=True,
+        max_workers=DEFAULT_MAX_WORKERS,
+        console=terminal.console,
+        cache=Cache(expiry_hours=0),
+        save=False,
+    )
+
+    table = Table(show_header=True, header_style="bold")
+    # Fixed columns never shrink; venue names truncate and errors wrap to fit narrow terminals
+    table.add_column(
+        "Venue", min_width=12, max_width=30, no_wrap=True, overflow="ellipsis"
+    )
+    table.add_column("Shows", justify="right", no_wrap=True, min_width=5)
+    table.add_column("Through", no_wrap=True, min_width=10)
+    table.add_column("Time%", justify="right", no_wrap=True, min_width=5)
+    table.add_column("Price%", justify="right", no_wrap=True, min_width=6)
+    table.add_column("Secs", justify="right", no_wrap=True, min_width=4)
+    table.add_column("Status", min_width=6, ratio=1)
+
+    failing = 0
+    for cfg in configs:
+        r = results[cfg["name"]]
+        evs = r.events
+        last = max((e.date for e in evs), default=None)
+        pct = lambda n: f"{100 * n // len(evs)}" if evs else "-"
+        if r.status == "fresh":
+            status = style("ok", "success")
+        else:
+            failing += 1
+            status = style(r.error or "site loaded, nothing parsed", "error")
+        table.add_row(
+            cfg["name"],
+            str(len(evs)),
+            last.strftime("%Y-%m-%d") if last else "-",
+            pct(sum(1 for e in evs if e.time)),
+            pct(sum(1 for e in evs if e.cost)),
+            f"{r.elapsed:.1f}",
+            status,
+        )
+    terminal.console.print(table)
+    hint = tls_hint(results)
+    if hint:
+        terminal.show_warning(hint)
+    total = sum(len(r.events) for r in results.values())
+    summary = f"{total} upcoming shows from {len(configs) - failing}/{len(configs)} venues in {time.time() - started:.0f}s"
+    (terminal.show_success if not failing else terminal.show_error)(summary)
+    return 1 if failing else 0
 
 
 def setup_parser():
@@ -118,7 +157,10 @@ Examples:
   %(prog)s calendar             # Show events for current and next month
   %(prog)s calendar --force-refresh # Force scrape all venues (bypass cache)
   %(prog)s scrape               # Scrape all venues and show all events
+  %(prog)s doctor               # Live-check every venue scraper (exit 1 if any broke)
+  %(prog)s doctor chapel        # Live-check one venue
   %(prog)s venue rickshaw       # Show events only from Rickshaw Stop (fuzzy matching)
+  %(prog)s rickshaw             # Same thing: any non-command word is a venue name
   %(prog)s venue "great american" # Show events only from Great American Music Hall
   %(prog)s pin 5                # Pin event number 5
   %(prog)s pin "Arctic Monkeys" # Pin event by artist name
@@ -131,7 +173,8 @@ Examples:
   %(prog)s --star-venue "The Warfield"     # Star a venue
   %(prog)s --unstar-venue "The Warfield"   # Unstar a venue
 
-Data is cached for 24 hours. Pins are preserved during updates.
+Data lives in ~/.musiclist (override with MUSICLIST_HOME) and is refreshed
+every 24 hours. Pins and stars are preserved across refreshes.
         """,
     )
 
@@ -166,6 +209,14 @@ Data is cached for 24 hours. Pins are preserved during updates.
     # Scrape command (full venue scraping)
     scrape_parser = subparsers.add_parser(
         "scrape", help="Scrape all venues and show all upcoming events"
+    )
+
+    # Doctor command (live scraper health check)
+    doctor_parser = subparsers.add_parser(
+        "doctor", help="Scrape every venue live and report which scrapers are broken"
+    )
+    doctor_parser.add_argument(
+        "venue_name", nargs="?", help="Only check venues matching this name"
     )
 
     # Pin command
@@ -287,63 +338,24 @@ def handle_unstar_venue(venue_name: str):
 
 
 def get_event_by_number(event_number: int):
-    """Get an event by its display number from the calendar view"""
-    from datetime import datetime
-
-    db = Database()
-    events = db.get_recent_events(
-        1000
-    )  # Increase limit to get all events like calendar
-
-    # Filter events the same way as calendar display
-    calendar = CalendarDisplay()
-    filtered_events = calendar.filter_events_by_date(events)
-
-    # Sort all events reverse chronologically regardless of pin status (closest events at bottom)
-    # Use event ID as secondary sort key for stable ordering when date/time are identical
-    ordered_events = sorted(
-        filtered_events,
-        key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
-        reverse=True,
-    )
-
-    # The event number is 1-based
+    """Get an event by the number shown next to it in any calendar view"""
+    ordered_events = numbered_calendar_events(Database())
     if 1 <= event_number <= len(ordered_events):
         return ordered_events[event_number - 1]
-
     return None
 
 
 def find_event_by_artist_name(artist_name: str):
-    """Find events by fuzzy matching artist name"""
-    from datetime import datetime
+    """Find events by fuzzy (case/accent-insensitive, partial) artist match.
 
-    db = Database()
-    events = db.get_recent_events(1000)  # Increase limit to match get_event_by_number
-
-    # Filter events the same way as calendar display
-    calendar = CalendarDisplay()
-    filtered_events = calendar.filter_events_by_date(events)
-
-    # Sort all events reverse chronologically regardless of pin status (closest events at bottom)
-    # Use event ID as secondary sort key for stable ordering when date/time are identical
-    ordered_events = sorted(
-        filtered_events,
-        key=lambda e: (e.date, e.time or datetime.min.time(), e.id or 0),
-        reverse=True,
-    )
-
-    # Fuzzy search for artist name (case insensitive, partial match)
-    artist_lower = artist_name.lower()
-    matches = []
-
-    for i, event in enumerate(ordered_events):
-        for artist in event.artists:
-            if artist_lower in artist.lower():
-                matches.append((i + 1, event))  # 1-based indexing
-                break
-
-    return matches
+    Returns (number, event) pairs using the same numbers the calendar shows.
+    """
+    needle = fold(artist_name)
+    return [
+        (i, event)
+        for i, event in enumerate(numbered_calendar_events(Database()), 1)
+        if any(needle in fold(artist) for artist in event.artists)
+    ]
 
 
 def handle_pin_event(target: str):
@@ -475,21 +487,16 @@ def handle_unpin_event(target: str):
 
 def find_venue_by_fuzzy_name(venue_input: str):
     """Find venue by fuzzy matching name"""
-    venue_input_lower = venue_input.lower()
+    venue_input_lower = fold(venue_input.strip())
     available_venues = get_venue_names()
 
-    # First try exact match
+    # First try exact match (case- and accent-insensitive: "cafe du nord")
     for venue_name in available_venues:
-        if venue_name.lower() == venue_input_lower:
+        if fold(venue_name) == venue_input_lower:
             return venue_name
 
     # Then try partial matches
-    matches = []
-    for venue_name in available_venues:
-        venue_lower = venue_name.lower()
-        # Check if input is a substring of venue name
-        if venue_input_lower in venue_lower:
-            matches.append(venue_name)
+    matches = [v for v in available_venues if venue_input_lower in fold(v)]
 
     if len(matches) == 1:
         return matches[0]
@@ -497,10 +504,10 @@ def find_venue_by_fuzzy_name(venue_input: str):
         return matches  # Return list for disambiguation
 
     # Try matching individual words
-    venue_words = venue_input.lower().split()
+    venue_words = venue_input_lower.split()
     word_matches = []
     for venue_name in available_venues:
-        venue_name_lower = venue_name.lower()
+        venue_name_lower = fold(venue_name)
         if all(word in venue_name_lower for word in venue_words):
             word_matches.append(venue_name)
 
@@ -575,14 +582,15 @@ def handle_unstar_venue_command(venue_input: str):
 
 
 def show_starred_venues():
-    """Show all starred venues"""
-    calendar = CalendarDisplay()
+    """Show events from starred venues, then the starred list"""
+    calendar = CalendarDisplay(db=Database())
     calendar.display_starred_venues_calendar()
 
 
 def show_pinned_events():
     """Show all pinned events"""
     from ui import Terminal
+    from ui.calendar import display_order
 
     db = Database()
     pinned_events = db.get_pinned_events()
@@ -595,12 +603,14 @@ def show_pinned_events():
         return
 
     terminal = Terminal()
-    terminal.display_calendar_events(pinned_events, "📌 Your Pinned Events")
+    terminal.display_calendar_events(
+        display_order(pinned_events), "📌 Your Pinned Events", numbers=event_numbers(db)
+    )
 
 
 def show_calendar(force_refresh: bool = False):
     """Show calendar view (current and next month)"""
-    calendar = CalendarDisplay()
+    calendar = CalendarDisplay(db=Database())
     calendar.display_calendar(force_refresh=force_refresh)
 
 
@@ -633,14 +643,34 @@ def show_venue_calendar(venue_name: str, force_refresh: bool = False):
         return
 
     # Single match found - show calendar for this venue
-    calendar = CalendarDisplay()
+    calendar = CalendarDisplay(db=Database())
     calendar.display_venue_calendar(venue_match, force_refresh=force_refresh)
 
 
-def main():
+def venue_shortcut(argv, parser):
+    """`music kilowatt` / `music great american` -> `music venue "<words>"`.
+
+    Applies only when the first word isn't a subcommand or option, so every
+    existing command parses exactly as before.
+    """
+    if not argv or argv[0].startswith("-"):
+        return argv
+    commands = set()
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            commands.update(action.choices)
+    if argv[0] in commands:
+        return argv
+    words = [a for a in argv if not a.startswith("-")]
+    flags = [a for a in argv if a.startswith("-")]
+    return ["venue", " ".join(words)] + flags
+
+
+def main(argv=None):
     """Main CLI entry point"""
     parser = setup_parser()
-    args = parser.parse_args()
+    argv = sys.argv[1:] if argv is None else list(argv)
+    args = parser.parse_args(venue_shortcut(argv, parser))
 
     # Handle venue starring options first
     if args.star_venue:
@@ -680,6 +710,9 @@ def main():
     if args.command == "starred":
         show_starred_venues()
         return
+
+    if args.command == "doctor":
+        sys.exit(run_doctor(args.venue_name))
 
     # Handle venue filtering command
     if args.command == "venue":

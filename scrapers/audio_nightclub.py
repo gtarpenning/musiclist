@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 from typing import List, Optional
 from bs4 import BeautifulSoup
 import re
@@ -51,15 +51,7 @@ class AudioNightclubScraper(BaseScraper):
                 month_num = self.month_name_to_number(month_name)
 
                 if month_num:
-                    # Use current year, but adjust if month has passed
-                    current_year = datetime.now().year
-                    current_month = datetime.now().month
-
-                    # If event month is before current month, assume next year
-                    if month_num < current_month:
-                        current_year += 1
-
-                    return date(current_year, month_num, int(day))
+                    return self.infer_year(month_num, int(day))
 
             except (ValueError, AttributeError):
                 pass

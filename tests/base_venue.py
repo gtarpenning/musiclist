@@ -9,6 +9,15 @@ from scrapers.base import BaseScraper
 from tests.base import BaseScraperTest
 
 
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+
+def csv_path_for(venue_name: str) -> str:
+    """Snapshot CSV for a venue, e.g. tests/data/the_chapel_expected.csv"""
+    safe_name = venue_name.lower().replace(" ", "_").replace("&", "and")
+    return os.path.join(DATA_DIR, f"{safe_name}_expected.csv")
+
+
 class BaseVenueTest(BaseScraperTest):
     """Base class for venue tests using CSV data files"""
 
@@ -41,9 +50,7 @@ class BaseVenueTest(BaseScraperTest):
 
     def _get_csv_filename(self) -> str:
         """Get CSV filename for this venue"""
-        # Convert venue name to safe filename
-        safe_name = self.VENUE_NAME.lower().replace(" ", "_").replace("&", "and")
-        return f"tests/data/{safe_name}_expected.csv"
+        return csv_path_for(self.VENUE_NAME)
 
     def _load_events_from_csv(self) -> List[Event]:
         """Load expected events from CSV file"""

@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List, Dict
+from typing import Dict, List, Optional
 import re
 
 from rich.console import Console
@@ -7,8 +7,6 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
 from rich.text import Text
-from rich.markdown import Markdown
-from rich.columns import Columns
 
 from models import Event
 from storage import Database
@@ -19,16 +17,11 @@ from .colors import (
     VENUE_COLOR,
     COST_COLOR,
     SUCCESS_COLOR,
-    ERROR_COLOR,
     INFO_COLOR,
-    WARNING_COLOR,
     HEADER_COLOR,
-    WEEKEND_COLOR,
-    PINNED_COLOR,
     PIN_MARKER_COLOR,
     style,
     link_style,
-    ColorKey,
 )
 
 
@@ -105,32 +98,58 @@ class Terminal:
             title=title, show_header=True, header_style=f"bold {HEADER_COLOR}"
         )
 
-        table.add_column("Date", style=DATE_COLOR, width=12)
-        table.add_column("Time", style=TIME_COLOR, width=8)
-        table.add_column("Artists", style=ARTISTS_COLOR, width=35)
-        table.add_column("Venue", style=VENUE_COLOR, width=20)
-        table.add_column("Cost", style=COST_COLOR, width=12)
+        artists_w, venue_w, cost_w = self._flex_widths(fixed_cells=11 + 8, n_columns=5)
+        cell = dict(no_wrap=True, overflow="ellipsis")
+        table.add_column("Date", style=DATE_COLOR, width=11, no_wrap=True)
+        table.add_column("Time", style=TIME_COLOR, width=8, no_wrap=True)
+        table.add_column("Artists", style=ARTISTS_COLOR, width=artists_w, **cell)
+        table.add_column("Venue", style=VENUE_COLOR, width=venue_w, **cell)
+        table.add_column("Cost", style=COST_COLOR, width=cost_w, **cell)
 
+        this_year = date.today().year
         for event in events:
-            date_str = event.date.strftime("%b %d")
+            # This list runs months ahead, so show the year once it isn't this one
+            date_str = event.date.strftime(
+                "%b %d" if event.date.year == this_year else "%b %d %Y"
+            )
             time_str = event.time.strftime("%I:%M %p") if event.time else ""
-            artists_str = event.artists_display
-            venue_str = event.venue
             cost_str = self.format_cost(event.cost or "TBD")
-
-            # Truncate long artist names
-            if len(artists_str) > 33:
-                artists_str = artists_str[:30] + "..."
-
-            table.add_row(date_str, time_str, artists_str, venue_str, cost_str)
+            table.add_row(
+                date_str, time_str, event.artists_display, event.venue, cost_str
+            )
 
         self.console.print(table)
         self.console.print(f"\n{style(f'Found {len(events)} events', 'dim')}")
 
+    def _calendar_widths(self):
+        """(event, venue, cost) widths for the calendar table: #, Date, Time are 5 + 10 + 8."""
+        return self._flex_widths(fixed_cells=5 + 10 + 8, n_columns=6)
+
+    def _flex_widths(self, fixed_cells: int, n_columns: int):
+        """(text, venue, cost) column widths that fit the terminal.
+
+        Each column costs 3 cells of border and padding plus one for the
+        table edge; what's left after the fixed columns is shared, capped so
+        wide terminals don't get sprawling rows.
+        """
+        rest = max(38, self.console.width - (3 * n_columns + 1) - fixed_cells)
+        cost_w = 15 if rest >= 75 else 10
+        venue_w = min(28, max(12, int((rest - cost_w) * 0.4)))
+        event_w = min(45, max(16, rest - cost_w - venue_w))
+        return event_w, venue_w, cost_w
+
     def display_calendar_events(
-        self, events: List[Event], title: str = "🎵 Upcoming Music Events"
+        self,
+        events: List[Event],
+        title: str = "🎵 Upcoming Music Events",
+        numbers: Optional[Dict[int, int]] = None,
     ):
-        """Display events in a calendar view with clickable links, day of week, weekend highlighting, venue stars, pin status, and day separators"""
+        """Display events in a calendar view with clickable links, day of week, weekend highlighting, venue stars, pin status, and day separators.
+
+        `numbers` maps event id -> the canonical number `music pin <n>` uses,
+        so filtered views (one venue, starred, pinned) show the same numbers
+        as the full calendar. Without it, rows are numbered in display order.
+        """
         if not events:
             self.console.print(style("No events found", "warning"))
             return
@@ -139,12 +158,14 @@ class Terminal:
             title=title, show_header=True, header_style=f"bold {HEADER_COLOR}"
         )
 
-        table.add_column("Pin", style=PIN_MARKER_COLOR, width=4)
-        table.add_column("Date", style=DATE_COLOR, width=16)
-        table.add_column("Time", style=TIME_COLOR, width=8)
-        table.add_column("Event", style=ARTISTS_COLOR, width=37)
-        table.add_column("Venue", style=VENUE_COLOR, width=27)
-        table.add_column("Cost", style=COST_COLOR, width=15)
+        event_w, venue_w, cost_w = self._calendar_widths()
+        cell = dict(no_wrap=True, overflow="ellipsis")
+        table.add_column("#", style=PIN_MARKER_COLOR, width=5, no_wrap=True)
+        table.add_column("Date", style=DATE_COLOR, width=10, no_wrap=True)
+        table.add_column("Time", style=TIME_COLOR, width=8, no_wrap=True)
+        table.add_column("Event", style=ARTISTS_COLOR, width=event_w, **cell)
+        table.add_column("Venue", style=VENUE_COLOR, width=venue_w, **cell)
+        table.add_column("Cost", style=COST_COLOR, width=cost_w, **cell)
 
         # Get starred venues for icon display
         db = Database()
@@ -162,8 +183,12 @@ class Terminal:
             current_date = event.date
             event_counter += 1
 
-            # Pin status
-            pin_status = "📌" if event.pinned else f"{event_counter:2d}"
+            if numbers is not None:
+                number = numbers.get(event.id)
+            else:
+                number = event_counter
+            number_str = f"{number:2d}" if number else " ·"
+            pin_status = f"📌{number or ''}" if event.pinned else number_str
 
             # Format date with day of week
             day_of_week = event.date.strftime("%a").upper()  # MON, TUE, etc.
@@ -193,12 +218,9 @@ class Terminal:
             else:
                 artists_str = artists_str.lower()
 
-            if len(artists_str) > 34:
-                artists_str = artists_str[:31] + "..."
-
             # Apply special styling for pinned events
             if event.pinned:
-                pin_status = style("📌", "pin_marker", bold=True)
+                pin_status = style(pin_status, "pin_marker", bold=True)
                 if event.url:
                     event_link = link_style(artists_str, event.url, "pinned")
                 else:
@@ -250,8 +272,14 @@ class Terminal:
             self.console.print(f"\n{style(pin_help, 'dim')}")
             self.console.print(style(artist_help, "dim"))
 
-    def display_venue_summary(self, venue_stats: Dict[str, int]):
-        """Display a summary of venues and their event counts with starring info"""
+    def display_venue_summary(
+        self, venue_stats: Dict[str, int], statuses: Optional[Dict] = None
+    ):
+        """Display a summary of venues and their event counts with starring info.
+
+        `statuses` maps venue name -> utils.parallel.VenueResult so the table
+        can tell "nothing scheduled" apart from "the site failed to load".
+        """
         if not venue_stats:
             return
 
@@ -265,7 +293,7 @@ class Terminal:
         venue_table.add_column(
             "Events Found", style=DATE_COLOR, justify="right", width=15
         )
-        venue_table.add_column("Status", style=SUCCESS_COLOR, width=15)
+        venue_table.add_column("Status", style=SUCCESS_COLOR, width=18)
 
         # Get starred venues for display
         db = Database()
@@ -274,8 +302,20 @@ class Terminal:
         total_events = 0
         for venue_name, count in venue_stats.items():
             total_events += count
-            status = "✓ Active" if count > 0 else "⚠️ No Events"
-            status_color = "success" if count > 0 else "warning"
+            result = (statuses or {}).get(venue_name)
+            if result is not None and result.status == "error":
+                status, status_color = "✗ Fetch failed", "error"
+            elif result is not None and result.status == "empty":
+                status, status_color = "⚠️ Nothing parsed", "warning"
+            elif count > 0:
+                status = (
+                    "✓ Cached"
+                    if result is not None and result.status == "cached"
+                    else "✓ Updated"
+                )
+                status_color = "success"
+            else:
+                status, status_color = "⚠️ No Events", "warning"
 
             # Add star icon for starred venues
             display_name = venue_name
@@ -302,10 +342,21 @@ class Terminal:
         if starred_venues:
             tips.append(f"⭐ {len(starred_venues)} starred venues highlighted")
         else:
-            tips.append('Use --star-venue "VENUE NAME" to star favorites')
+            tips.append("Use music star <venue> to star favorites")
 
         tips_str = " • ".join(tips)
         self.console.print(f"\n{style(f'💡 Tip: {tips_str}', 'dim')}")
+
+        broken = [
+            n for n, r in (statuses or {}).items() if r.status in ("error", "empty")
+        ]
+        if broken:
+            self.console.print(
+                style(
+                    f"⚠️  {len(broken)} venue(s) didn't update: {', '.join(broken)}. Run `music doctor` for details.",
+                    "warning",
+                )
+            )
 
     def show_scraping_progress(self, venue_name: str):
         """Show progress spinner for scraping"""
@@ -327,6 +378,10 @@ class Terminal:
     def show_info(self, message: str):
         """Show info message"""
         self.console.print(f"{style('ℹ', 'info')} {message}")
+
+    def show_warning(self, message: str):
+        """Show warning message"""
+        self.console.print(f"{style('⚠', 'warning')} {message}")
 
     def show_header(self, title: str):
         """Show application header"""

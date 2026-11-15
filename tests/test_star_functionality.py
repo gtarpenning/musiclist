@@ -213,7 +213,11 @@ class TestStarFunctionality(unittest.TestCase):
         for venue in venues_to_star:
             self.db.star_venue(venue)
 
-        with patch("cli.Database", return_value=self.db):
+        # Stub the live scrape so the test stays offline
+        with (
+            patch("cli.Database", return_value=self.db),
+            patch("ui.calendar.CalendarDisplay.refresh", return_value={}),
+        ):
             cli.show_starred_venues()
 
             output = mock_stdout.getvalue()

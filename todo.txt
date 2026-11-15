@@ -4,7 +4,7 @@
 [ ] ical exporter (subscribing to a calendar)
 [ ] venue list generation
 [x] only show dates after current time
-[x] add a way to pin events that i want to go to 
+[x] add a way to pin events that i want to go to
 [x] fix the independent, scraper is broken
 [x] fix bottom of the hill, scraper is broken
 [x] if cost isn't found, show nothing instead of "TBD"
@@ -12,3 +12,10 @@
 [x] bug with large visual space (and lag) after header before calendar
 [x] fix the cli so that "staring" works like pinning
 [x] add a way to just filter by venue, like "music rickshaw" (fuzzy matching)
+[x] shared platform scrapers (TicketWeb, SeeTickets, JSON-LD, DICE) + 27 venues
+[x] `music doctor` live health check for scraper drift
+[x] data in ~/.musiclist instead of the current directory
+[ ] more venues: Great Northern, Thee Parkside, Monarch, El Rio, SFJAZZ,
+    The Lost Church, Black Cat, Make-Out Room, Amado's
+[ ] times for August Hall, 1015 Folsom, DNA Lounge, Audio, Gray Area
+    (not on their listing pages; would need a fetch per event)
