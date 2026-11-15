@@ -13,7 +13,7 @@ import os
 # Add project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from tests.base_venue import BaseVenueTest
+from tests.base_venue import BaseVenueTest, csv_path_for
 from venues_config import get_enabled_venues
 
 
@@ -42,8 +42,14 @@ def create_venue_test_class(venue_config):
 
 
 def generate_all_venue_tests():
-    """Generate test classes for all enabled venues"""
-    venues = get_enabled_venues()
+    """Generate test classes for venues that have a snapshot CSV in tests/data.
+
+    These check the Event model / DB / CSV round-trip on recorded data; the
+    parsers themselves are covered offline by tests/test_scrapers.py.
+    """
+    venues = [
+        v for v in get_enabled_venues() if os.path.exists(csv_path_for(v["name"]))
+    ]
     test_classes = []
 
     for venue_config in venues:

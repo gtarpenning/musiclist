@@ -4,37 +4,147 @@ Centralized venue configuration for the musiclist project.
 
 This configuration is used by:
 - cli.py for scraping and calendar display
-- Test framework for automatic test generation
-- CLI for venue selection
+- `music doctor` for live scraper health checks
+- tests/ for fixture-driven parser tests
+
+Adding a venue usually means picking the platform scraper that matches its
+site (TicketWeb, SeeTickets, JSON-LD, DICE, Rockhouse) and adding a line
+here; write a dedicated scraper only for one-off sites.
 """
 
-# Parallelism configuration
-DEFAULT_MAX_WORKERS = 5  # Number of venues to scrape in parallel
+import unicodedata
 
-from scrapers.brick_mortar import BrickMortarScraper
-from scrapers.warfield import WarfieldScraper
-from scrapers.gamh import GAMHScraper
-from scrapers.neck_woods import NeckOfTheWoodsScraper
-from scrapers.regency_ballroom import RegencyBallroomScraper
-from scrapers.midway import MidwayScraper
-from scrapers.independent import IndependentScraper
-from scrapers.bottom_of_hill import BottomOfTheHillScraper
-from scrapers.audio_nightclub import AudioNightclubScraper
-from scrapers.reverb import ReverbScraper
-from scrapers.public_works import PublicWorksScraper
-from scrapers.rickshaw_stop import RickshawStopScraper
-from scrapers.bimbos_365 import Bimbos365Scraper
-from scrapers.gray_area import GrayAreaScraper
-from scrapers.chapel import ChapelScraper
+from scrapers import (
+    AnotherPlanetScraper,
+    AudioNightclubScraper,
+    BottomOfTheHillScraper,
+    CafeDuNordScraper,
+    DiceScraper,
+    DnaLoungeScraper,
+    Folsom1015Scraper,
+    GrayAreaScraper,
+    JsonLdScraper,
+    PublicWorksScraper,
+    RegencyBallroomScraper,
+    RockhouseScraper,
+    SeeTicketsScraper,
+    SwedishAmericanHallScraper,
+    TicketWebScraper,
+    WarfieldScraper,
+)
+
+# Number of venues to scrape in parallel
+DEFAULT_MAX_WORKERS = 8
 
 
-# All venue configurations
 VENUES_CONFIG = [
+    # --- TicketWeb plugin --------------------------------------------------
+    {
+        "name": "The Independent",
+        "base_url": "https://www.theindependentsf.com",
+        # /calendar/ is an AJAX widget; the homepage carries the full list
+        "calendar_path": "/",
+        "scraper_class": TicketWebScraper,
+    },
+    {
+        "name": "August Hall",
+        "base_url": "https://www.augusthallsf.com",
+        "calendar_path": "/events/",
+        "scraper_class": TicketWebScraper,
+    },
     {
         "name": "Brick & Mortar Music Hall",
         "base_url": "https://www.brickandmortarmusic.com",
         "calendar_path": "/calendar/",
-        "scraper_class": BrickMortarScraper,
+        "scraper_class": TicketWebScraper,
+    },
+    {
+        "name": "Neck of the Woods",
+        "base_url": "https://www.neckofthewoodssf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": TicketWebScraper,
+    },
+    {
+        "name": "Bimbo's 365 Club",
+        "base_url": "https://bimbos365club.com",
+        "calendar_path": "/shows/",
+        "scraper_class": TicketWebScraper,
+    },
+    # --- SeeTickets plugin -------------------------------------------------
+    {
+        "name": "The Chapel",
+        "base_url": "https://thechapelsf.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": SeeTicketsScraper,
+    },
+    {
+        "name": "Rickshaw Stop",
+        "base_url": "https://rickshawstop.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": SeeTicketsScraper,
+    },
+    {
+        "name": "Hotel Utah Saloon",
+        "base_url": "https://hotelutah.com",
+        "calendar_path": "/calendar/",
+        "scraper_class": SeeTicketsScraper,
+    },
+    # --- schema.org JSON-LD ------------------------------------------------
+    {
+        "name": "The Fillmore",
+        "base_url": "https://www.thefillmore.com",
+        "calendar_path": "/shows",
+        "scraper_class": JsonLdScraper,
+    },
+    {
+        "name": "The Masonic",
+        "base_url": "https://www.sfmasonic.com",
+        "calendar_path": "/shows",
+        "scraper_class": JsonLdScraper,
+    },
+    {
+        "name": "The Midway",
+        "base_url": "https://themidwaysf.com",
+        "calendar_path": "/events/",
+        "scraper_class": JsonLdScraper,
+    },
+    # --- DICE widget -------------------------------------------------------
+    {
+        "name": "Kilowatt",
+        "base_url": "https://kilowattbar.com",
+        "calendar_path": "/events",
+        "scraper_class": DiceScraper,
+    },
+    {
+        "name": "The Knockout",
+        "base_url": "https://theknockoutsf.com",
+        "calendar_path": "/",
+        "scraper_class": DiceScraper,
+    },
+    {
+        "name": "Halcyon",
+        "base_url": "https://halcyon-sf.com",
+        "calendar_path": "/main/",
+        "scraper_class": DiceScraper,
+    },
+    # --- one-off sites -----------------------------------------------------
+    {
+        "name": "Café du Nord",
+        "base_url": "https://cafedunord.com",
+        "calendar_path": "/shows",
+        "scraper_class": CafeDuNordScraper,
+    },
+    {
+        "name": "Swedish American Hall",
+        "base_url": "https://cafedunord.com",
+        "calendar_path": "/shows",
+        "scraper_class": SwedishAmericanHallScraper,
+    },
+    {
+        "name": "Bill Graham Civic Auditorium",
+        "base_url": "https://billgrahamcivic.com",
+        "calendar_path": "/event-listing/",
+        "scraper_class": AnotherPlanetScraper,
     },
     {
         "name": "The Warfield",
@@ -43,34 +153,16 @@ VENUES_CONFIG = [
         "scraper_class": WarfieldScraper,
     },
     {
-        "name": "Great American Music Hall",
-        "base_url": "https://gamh.com",
-        "calendar_path": "/calendar/",
-        "scraper_class": GAMHScraper,
-    },
-    {
-        "name": "Neck of the Woods",
-        "base_url": "https://www.neckofthewoodssf.com",
-        "calendar_path": "/calendar/",
-        "scraper_class": NeckOfTheWoodsScraper,
-    },
-    {
         "name": "The Regency Ballroom",
         "base_url": "https://www.theregencyballroom.com",
         "calendar_path": "/shows/",
         "scraper_class": RegencyBallroomScraper,
     },
     {
-        "name": "The Midway",
-        "base_url": "https://themidwaysf.com",
-        "calendar_path": "/events/",
-        "scraper_class": MidwayScraper,
-    },
-    {
-        "name": "The Independent",
-        "base_url": "https://www.theindependentsf.com",
+        "name": "Great American Music Hall",
+        "base_url": "https://gamh.com",
         "calendar_path": "/calendar/",
-        "scraper_class": IndependentScraper,
+        "scraper_class": SeeTicketsScraper,
     },
     {
         "name": "Bottom of the Hill",
@@ -79,34 +171,34 @@ VENUES_CONFIG = [
         "scraper_class": BottomOfTheHillScraper,
     },
     {
-        "name": "Audio Nightclub",
-        "base_url": "https://m.audiosf.com",
-        "calendar_path": "/events/",
-        "scraper_class": AudioNightclubScraper,
-    },
-    {
-        "name": "Reverb",
-        "base_url": "https://reverb-sf.com",
-        "calendar_path": "/",
-        "scraper_class": ReverbScraper,
-    },
-    {
         "name": "Public Works",
         "base_url": "https://publicsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": PublicWorksScraper,
     },
     {
-        "name": "Rickshaw Stop",
-        "base_url": "https://rickshawstop.com",
+        "name": "1015 Folsom",
+        "base_url": "https://1015.com",
         "calendar_path": "/calendar/",
-        "scraper_class": RickshawStopScraper,
+        "scraper_class": Folsom1015Scraper,
     },
     {
-        "name": "Bimbo's 365 Club",
-        "base_url": "https://bimbos365club.com",
-        "calendar_path": "/shows/",
-        "scraper_class": Bimbos365Scraper,
+        "name": "DNA Lounge",
+        "base_url": "https://www.dnalounge.com",
+        "calendar_path": "/calendar/latest.html",
+        "scraper_class": DnaLoungeScraper,
+    },
+    {
+        "name": "Audio Nightclub",
+        "base_url": "https://m.audiosf.com",
+        "calendar_path": "/events/",
+        "scraper_class": AudioNightclubScraper,
+    },
+    {
+        "name": "Boom Boom Room",
+        "base_url": "https://boomboomroom.com",
+        "calendar_path": "/",
+        "scraper_class": RockhouseScraper,
     },
     {
         "name": "Gray Area",
@@ -114,43 +206,56 @@ VENUES_CONFIG = [
         "calendar_path": "/visit/events/",
         "scraper_class": GrayAreaScraper,
     },
-    {
-        "name": "The Chapel",
-        "base_url": "https://thechapelsf.com",
-        "calendar_path": "/calendar/",
-        "scraper_class": ChapelScraper,
-    },
 ]
 
 
-def _get_venue_starred_status(venue_name):
-    """Get the starred status for a venue from database"""
+def fold(text: str) -> str:
+    """Lowercase and strip accents so 'cafe' matches 'Café du Nord'."""
+    normalized = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in normalized if not unicodedata.combining(c)).lower()
+
+
+def _starred_names():
     from storage import Database
 
-    db = Database()
-    return db.is_venue_starred(venue_name)
+    return set(Database().get_starred_venues())
 
 
 def get_enabled_venues():
-    """Get list of enabled venue configurations with starred status from user config"""
+    """Get list of enabled venue configurations with starred status"""
+    starred = _starred_names()
     venues = []
     for venue in VENUES_CONFIG:
         if venue.get("enabled", True):
             venue_copy = venue.copy()
-            venue_copy["starred"] = _get_venue_starred_status(venue["name"])
+            venue_copy["starred"] = venue["name"] in starred
             venues.append(venue_copy)
     return venues
 
 
 def get_venue_by_name(name: str):
-    """Get venue configuration by name with starred status"""
-    name_lower = name.lower()
+    """Get venue configuration by exact (accent/case-insensitive) name with starred status"""
+    target = fold(name)
     for venue in VENUES_CONFIG:
-        if venue["name"].lower() == name_lower:
+        if fold(venue["name"]) == target:
             venue_copy = venue.copy()
-            venue_copy["starred"] = _get_venue_starred_status(venue["name"])
+            venue_copy["starred"] = venue["name"] in _starred_names()
             return venue_copy
     return None
+
+
+def _ensure_venue_row(venue_config):
+    """Starring needs a venues row even before the venue was ever scraped."""
+    from models import Venue
+    from storage import Database
+
+    Database().save_venue(
+        Venue(
+            venue_config["name"],
+            venue_config["base_url"],
+            venue_config.get("calendar_path", "/"),
+        )
+    )
 
 
 def star_venue(venue_name: str):
@@ -165,11 +270,10 @@ def star_venue(venue_name: str):
     if db.is_venue_starred(venue["name"]):
         return True, f"'{venue['name']}' is already starred"
 
-    success = db.star_venue(venue["name"])
-    if success:
+    _ensure_venue_row(venue)
+    if db.star_venue(venue["name"]):
         return True, f"Starred '{venue['name']}'"
-    else:
-        return False, f"Failed to star '{venue['name']}'"
+    return False, f"Failed to star '{venue['name']}'"
 
 
 def unstar_venue(venue_name: str):
@@ -184,19 +288,16 @@ def unstar_venue(venue_name: str):
     if not db.is_venue_starred(venue["name"]):
         return True, f"'{venue['name']}' was not starred"
 
-    success = db.unstar_venue(venue["name"])
-    if success:
+    if db.unstar_venue(venue["name"]):
         return True, f"Unstarred '{venue['name']}'"
-    else:
-        return False, f"Failed to unstar '{venue['name']}'"
+    return False, f"Failed to unstar '{venue['name']}'"
 
 
 def get_starred_venues():
     """Get list of starred venue names"""
     from storage import Database
 
-    db = Database()
-    return db.get_starred_venues()
+    return Database().get_starred_venues()
 
 
 def get_venue_names():
@@ -205,5 +306,5 @@ def get_venue_names():
 
 
 def get_venues_config():
-    """Get venues in new format"""
+    """Get all venue configurations"""
     return VENUES_CONFIG
