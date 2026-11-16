@@ -1,7 +1,7 @@
 # LLM Context - SF Music Calendar
 
 ## Project Overview
-Multi-venue music event scraper for San Francisco. Scrapes 27 venues → SQLite → Rich terminal UI with date filtering, event pinning and venue starring. Pip package (`sf-music-calendar`) with a global `music` command.
+Multi-venue music event scraper for San Francisco. Scrapes 29 venues → SQLite → Rich terminal UI with date filtering, event pinning and venue starring. Pip package (`sf-music-calendar`) with a global `music` command.
 
 ## Architecture
 
@@ -59,6 +59,8 @@ UNIQUE: (venue_id, date, artists, url)
 
 Venue-specific: Café du Nord / Swedish American Hall (one page, `data-room`), Another Planet (`bill_graham.py`), 1015 Folsom, DNA Lounge (monthly calendar pages), Public Works, Warfield, Regency, Bottom of the Hill, Audio, Gray Area.
 
+`nineteenhz.py` reads 19hz.info's Bay Area listing (one volunteer-run page; `NineteenHzScraper.fetch_page` fetches it once per process, shared by every caller). `NineteenHzScraper` gives The Great Northern and Monarch their dated shows (config `home_url` is what the site links to). `fill_prices()` prices shows our scrapers found without one: same venue (named rooms count), same night (a listing starting before 6am also covers the night before), then a unique best match on distinctive title words, or each side having exactly one show that night. Weekly nights need the title match.
+
 ### BaseScraper helpers
 - `scrape()` raises `ScrapeError` on fetch failure; `get_events()` swallows it and returns `[]`
 - `_get()` walks `HEADER_PROFILES` for `FETCH_ROUNDS` rounds with backoff (Cloudflare scores some UAs as bots, intermittently)
@@ -75,7 +77,7 @@ Venue-specific: Café du Nord / Swedish American Hall (one page, `data-room`), A
 4. Run `music doctor <venue>`: shows, last date, and time/price coverage should look right.
 
 ## Website (`site/`)
-- `site/build.py`: scrapes all venues (parallel, then one sequential retry pass for failures) into its own `MUSICLIST_HOME` (default `~/.musiclist-site`, separate from the CLI's pins and stars), exports `dist/events.json` (venues with `area`/`stale`, events pointing at venues by index, prices tidied), copies `site/public/` and stamps a content hash on asset URLs. `--deploy` publishes to the Cloudflare Pages project `sf-music-calendar` with `npx wrangler@4 pages deploy`, but only when ≥60% of venues refreshed and ≥150 shows exist; otherwise the live site keeps last week's build.
+- `site/build.py`: scrapes all venues (parallel, then one sequential retry pass for failures) into its own `MUSICLIST_HOME` (default `~/.musiclist-site`, separate from the CLI's pins and stars), fills missing prices from 19hz.info (skipped if it's down), exports `dist/events.json` (venues with `area`/`stale`, events pointing at venues by index, prices tidied), copies `site/public/` and stamps a content hash on asset URLs. `--deploy` publishes to the Cloudflare Pages project `sf-music-calendar` with `npx wrangler@4 pages deploy`, but only when ≥60% of venues refreshed and ≥150 shows exist; otherwise the live site keeps last week's build.
 - `site/public/`: static page in the typewriter design system (`typewriter.css` vendored from ez-gz/styles; `site.css` is the page layer). `app.js` does all filtering client-side in America/Los_Angeles dates; filters are mirrored into the URL (`q`, `when`, `date`, `venues`), and the venue choice is remembered in localStorage.
 - `site/weekly.sh` + `site/install-weekly.sh`: LaunchAgent `local.musiclist-site` (Sundays 9:00) keeps a managed clone in `~/.musiclist-site/repo`, a venv from pyenv 3.13.2 (OpenSSL 3, needed for Rickshaw Stop), and logs to `~/.musiclist-site/weekly.log`. A failed run posts a macOS notification.
 - A venue that fails keeps its previous rows (the DB only prunes on success) and is listed as "not refreshed" on the page.

@@ -30,6 +30,7 @@ ROOT = SITE.parent
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("MUSICLIST_HOME", str(Path.home() / ".musiclist-site"))
 
+from scrapers.nineteenhz import fetch_listings, fill_prices  # noqa: E402
 from storage import Cache, Database  # noqa: E402
 from utils.parallel import refresh_venue  # noqa: E402
 from venues_config import DEFAULT_MAX_WORKERS, get_venues_config  # noqa: E402
@@ -98,10 +99,24 @@ def price(cost):
     return c
 
 
-def export(configs, db: Database, results) -> dict:
+def prices_from_19hz():
+    """19hz.info's listings, to price shows our scrapers found without one ([] if it's down)."""
+    try:
+        return fetch_listings()
+    except Exception as e:  # prices are a nice-to-have; never fail the build over them
+        log(f"19hz.info unavailable, prices not filled: {e}")
+        return []
+
+
+def export(configs, db: Database, results, listings=()) -> dict:
     names = [c["name"] for c in configs]
     index = {name: i for i, name in enumerate(names)}
     events = db.get_events(venues=names)  # upcoming only, ordered by date, time
+    if listings:
+        missing = sum(1 for e in events if not e.cost)
+        log(
+            f"19hz.info priced {fill_prices(events, listings)} of {missing} unpriced shows"
+        )
 
     counts = {}
     for e in events:
@@ -115,7 +130,9 @@ def export(configs, db: Database, results) -> dict:
             {
                 "name": cfg["name"],
                 "area": cfg.get("area", ""),
-                "url": cfg["base_url"].rstrip("/") + cfg.get("calendar_path", "/"),
+                # home_url: venues read from a listing site link to their own site instead
+                "url": cfg.get("home_url")
+                or cfg["base_url"].rstrip("/") + cfg.get("calendar_path", "/"),
                 "shows": counts.get(cfg["name"], 0),
                 # stale: this run couldn't refresh it, so its rows are from an earlier scrape
                 "stale": bool(r and r.status not in ("fresh", "cached")),
@@ -198,7 +215,7 @@ def main() -> int:
     results = {}
     if not args.no_scrape:
         results = scrape(configs, db)
-    data = export(configs, db, results)
+    data = export(configs, db, results, prices_from_19hz())
 
     ok = sum(1 for v in data["venues"] if not v["stale"])
     log(f"{len(data['events'])} upcoming shows, {ok}/{len(configs)} venues refreshed")

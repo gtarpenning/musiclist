@@ -34,7 +34,7 @@ Data (events, pins, stars, page cache) lives in `~/.musiclist`; set
 
 ## Venues
 
-27 venues, most read through the ticketing platform the venue's own site uses:
+29 venues, most read through the ticketing platform the venue's own site uses:
 
 | Platform | Venues |
 | --- | --- |
@@ -43,6 +43,11 @@ Data (events, pins, stars, page cache) lives in `~/.musiclist`; set
 | schema.org JSON-LD | The Fillmore, The Masonic, The Midway |
 | DICE widget | Kilowatt, The Knockout, Halcyon |
 | Venue sites | Café du Nord, Swedish American Hall, Bill Graham Civic, The Warfield, The Regency Ballroom, Bottom of the Hill, Public Works, 1015 Folsom, DNA Lounge, Audio, Boom Boom Room, Gray Area |
+| [19hz.info](https://19hz.info/eventlisting_BayArea.php) | The Great Northern, Monarch (no scrapable calendar of their own) |
+
+The website also takes prices from 19hz.info for shows whose venue page lists none
+(Public Works sells through Tixr, which blocks scripts; DNA Lounge and The Independent
+keep prices on their ticketing sites).
 
 ## Website
 

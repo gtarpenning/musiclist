@@ -24,6 +24,7 @@ from scrapers import (
     Folsom1015Scraper,
     GrayAreaScraper,
     JsonLdScraper,
+    NineteenHzScraper,
     PublicWorksScraper,
     RegencyBallroomScraper,
     RockhouseScraper,
@@ -232,6 +233,24 @@ VENUES_CONFIG = [
         "base_url": "https://grayarea.org",
         "calendar_path": "/visit/events/",
         "scraper_class": GrayAreaScraper,
+    },
+    # Clubs without a scrapable calendar of their own, read from 19hz.info.
+    # home_url is what the website links to (the calendar URL is 19hz's page).
+    {
+        "name": "The Great Northern",
+        "area": "SoMa",
+        "base_url": "https://19hz.info",
+        "calendar_path": "/eventlisting_BayArea.php",
+        "home_url": "https://www.thegreatnorthernsf.com/",
+        "scraper_class": NineteenHzScraper,
+    },
+    {
+        "name": "Monarch",
+        "area": "SoMa",
+        "base_url": "https://19hz.info",
+        "calendar_path": "/eventlisting_BayArea.php",
+        "home_url": "https://www.monarchsf.com/",
+        "scraper_class": NineteenHzScraper,
     },
 ]
 

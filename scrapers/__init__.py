@@ -18,6 +18,7 @@ from .cafe_du_nord import CafeDuNordScraper, SwedishAmericanHallScraper
 from .bill_graham import AnotherPlanetScraper
 from .folsom_1015 import Folsom1015Scraper
 from .dna_lounge import DnaLoungeScraper
+from .nineteenhz import NineteenHzScraper
 
 __all__ = [
     "BaseScraper",
@@ -38,4 +39,5 @@ __all__ = [
     "AnotherPlanetScraper",
     "Folsom1015Scraper",
     "DnaLoungeScraper",
+    "NineteenHzScraper",
 ]
