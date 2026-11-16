@@ -44,6 +44,30 @@ Data (events, pins, stars, page cache) lives in `~/.musiclist`; set
 | DICE widget | Kilowatt, The Knockout, Halcyon |
 | Venue sites | Café du Nord, Swedish American Hall, Bill Graham Civic, The Warfield, The Regency Ballroom, Bottom of the Hill, Public Works, 1015 Folsom, DNA Lounge, Audio, Boom Boom Room, Gray Area |
 
+## Website
+
+The same listings as a static page: **https://sf-music-calendar.pages.dev**. Search, a
+when filter (tonight, weekend, or a day picked from a calendar), and a venue picker;
+the filters live in the URL, so a view can be bookmarked or shared.
+
+A LaunchAgent on the Mac rebuilds and redeploys it every Sunday at 9:00:
+
+```bash
+site/install-weekly.sh                              # install or update (tracks main)
+launchctl kickstart gui/$(id -u)/local.musiclist-site   # run it now
+tail -f ~/.musiclist-site/weekly.log
+site/install-weekly.sh --uninstall
+```
+
+Working on the page itself:
+
+```bash
+python site/build.py              # scrape every venue into ~/.musiclist-site, write site/dist/
+python site/build.py --no-scrape  # rebuild from the last scrape
+python -m http.server -d site/dist 8791
+python site/build.py --deploy     # publish (refuses if the scrape looks broken)
+```
+
 ## Development
 ```bash
 pip install -e .

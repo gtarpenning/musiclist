@@ -41,6 +41,7 @@ VENUES_CONFIG = [
     # --- TicketWeb plugin --------------------------------------------------
     {
         "name": "The Independent",
+        "area": "NoPa",
         "base_url": "https://www.theindependentsf.com",
         # /calendar/ is an AJAX widget; the homepage carries the full list
         "calendar_path": "/",
@@ -48,24 +49,28 @@ VENUES_CONFIG = [
     },
     {
         "name": "August Hall",
+        "area": "Union Square",
         "base_url": "https://www.augusthallsf.com",
         "calendar_path": "/events/",
         "scraper_class": TicketWebScraper,
     },
     {
         "name": "Brick & Mortar Music Hall",
+        "area": "Mission",
         "base_url": "https://www.brickandmortarmusic.com",
         "calendar_path": "/calendar/",
         "scraper_class": TicketWebScraper,
     },
     {
         "name": "Neck of the Woods",
+        "area": "Inner Richmond",
         "base_url": "https://www.neckofthewoodssf.com",
         "calendar_path": "/calendar/",
         "scraper_class": TicketWebScraper,
     },
     {
         "name": "Bimbo's 365 Club",
+        "area": "North Beach",
         "base_url": "https://bimbos365club.com",
         "calendar_path": "/shows/",
         "scraper_class": TicketWebScraper,
@@ -73,18 +78,21 @@ VENUES_CONFIG = [
     # --- SeeTickets plugin -------------------------------------------------
     {
         "name": "The Chapel",
+        "area": "Mission",
         "base_url": "https://thechapelsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": SeeTicketsScraper,
     },
     {
         "name": "Rickshaw Stop",
+        "area": "Hayes Valley",
         "base_url": "https://rickshawstop.com",
         "calendar_path": "/calendar/",
         "scraper_class": SeeTicketsScraper,
     },
     {
         "name": "Hotel Utah Saloon",
+        "area": "SoMa",
         "base_url": "https://hotelutah.com",
         "calendar_path": "/calendar/",
         "scraper_class": SeeTicketsScraper,
@@ -92,18 +100,21 @@ VENUES_CONFIG = [
     # --- schema.org JSON-LD ------------------------------------------------
     {
         "name": "The Fillmore",
+        "area": "Fillmore",
         "base_url": "https://www.thefillmore.com",
         "calendar_path": "/shows",
         "scraper_class": JsonLdScraper,
     },
     {
         "name": "The Masonic",
+        "area": "Nob Hill",
         "base_url": "https://www.sfmasonic.com",
         "calendar_path": "/shows",
         "scraper_class": JsonLdScraper,
     },
     {
         "name": "The Midway",
+        "area": "Dogpatch",
         "base_url": "https://themidwaysf.com",
         "calendar_path": "/events/",
         "scraper_class": JsonLdScraper,
@@ -111,18 +122,21 @@ VENUES_CONFIG = [
     # --- DICE widget -------------------------------------------------------
     {
         "name": "Kilowatt",
+        "area": "Mission",
         "base_url": "https://kilowattbar.com",
         "calendar_path": "/events",
         "scraper_class": DiceScraper,
     },
     {
         "name": "The Knockout",
+        "area": "Mission",
         "base_url": "https://theknockoutsf.com",
         "calendar_path": "/",
         "scraper_class": DiceScraper,
     },
     {
         "name": "Halcyon",
+        "area": "SoMa",
         "base_url": "https://halcyon-sf.com",
         "calendar_path": "/main/",
         "scraper_class": DiceScraper,
@@ -130,78 +144,91 @@ VENUES_CONFIG = [
     # --- one-off sites -----------------------------------------------------
     {
         "name": "Café du Nord",
+        "area": "Upper Market",
         "base_url": "https://cafedunord.com",
         "calendar_path": "/shows",
         "scraper_class": CafeDuNordScraper,
     },
     {
         "name": "Swedish American Hall",
+        "area": "Upper Market",
         "base_url": "https://cafedunord.com",
         "calendar_path": "/shows",
         "scraper_class": SwedishAmericanHallScraper,
     },
     {
         "name": "Bill Graham Civic Auditorium",
+        "area": "Civic Center",
         "base_url": "https://billgrahamcivic.com",
         "calendar_path": "/event-listing/",
         "scraper_class": AnotherPlanetScraper,
     },
     {
         "name": "The Warfield",
+        "area": "Mid-Market",
         "base_url": "https://www.thewarfieldtheatre.com",
         "calendar_path": "/events/",
         "scraper_class": WarfieldScraper,
     },
     {
         "name": "The Regency Ballroom",
+        "area": "Polk Gulch",
         "base_url": "https://www.theregencyballroom.com",
         "calendar_path": "/shows/",
         "scraper_class": RegencyBallroomScraper,
     },
     {
         "name": "Great American Music Hall",
+        "area": "Tenderloin",
         "base_url": "https://gamh.com",
         "calendar_path": "/calendar/",
         "scraper_class": SeeTicketsScraper,
     },
     {
         "name": "Bottom of the Hill",
+        "area": "Potrero Hill",
         "base_url": "https://www.bottomofthehill.com",
         "calendar_path": "/calendar.html",
         "scraper_class": BottomOfTheHillScraper,
     },
     {
         "name": "Public Works",
+        "area": "Mission",
         "base_url": "https://publicsf.com",
         "calendar_path": "/calendar/",
         "scraper_class": PublicWorksScraper,
     },
     {
         "name": "1015 Folsom",
+        "area": "SoMa",
         "base_url": "https://1015.com",
         "calendar_path": "/calendar/",
         "scraper_class": Folsom1015Scraper,
     },
     {
         "name": "DNA Lounge",
+        "area": "SoMa",
         "base_url": "https://www.dnalounge.com",
         "calendar_path": "/calendar/latest.html",
         "scraper_class": DnaLoungeScraper,
     },
     {
         "name": "Audio Nightclub",
+        "area": "SoMa",
         "base_url": "https://m.audiosf.com",
         "calendar_path": "/events/",
         "scraper_class": AudioNightclubScraper,
     },
     {
         "name": "Boom Boom Room",
+        "area": "Fillmore",
         "base_url": "https://boomboomroom.com",
         "calendar_path": "/",
         "scraper_class": RockhouseScraper,
     },
     {
         "name": "Gray Area",
+        "area": "Mission",
         "base_url": "https://grayarea.org",
         "calendar_path": "/visit/events/",
         "scraper_class": GrayAreaScraper,

@@ -117,6 +117,27 @@ class DateLogicTest(unittest.TestCase):
         self.assertEqual(split("Simon & Garfunkel"), ["Simon & Garfunkel"])
         self.assertEqual(split("with Foo + Bar"), ["Foo", "Bar"])
 
+    def test_dedupe_artists_cleans_lineups(self):
+        dedupe = self.s.dedupe_artists
+        # plugin field labels are dropped
+        self.assertEqual(
+            dedupe(["Margaret Glaspy", "Supporting Talent: Anna Tivel"]),
+            ["Margaret Glaspy", "Anna Tivel"],
+        )
+        # a "support" entry that only restates the headliner is dropped
+        self.assertEqual(dedupe(["Starpine", "Starpine : LIVE"]), ["Starpine"])
+        self.assertEqual(dedupe(["KAUFMANN", "Kaufmann (DE)"]), ["KAUFMANN"])
+        self.assertEqual(
+            dedupe(["Chelsea Cutler", "Chelsea Cutler - IS THIS THE END? Tour"]),
+            ["Chelsea Cutler"],
+        )
+        self.assertEqual(dedupe(["Bob", "Bob Mould"]), ["Bob", "Bob Mould"])
+        # comma-joined entries dedupe the way storage will split them
+        self.assertEqual(
+            dedupe(["HUG", "Devendra Banhart, Noah Georgeson", "Noah Georgeson"]),
+            ["HUG", "Devendra Banhart", "Noah Georgeson"],
+        )
+
     def test_parse_time_and_price(self):
         self.assertEqual(self.s.parse_time_ampm("Show 8pm"), time(20, 0))
         self.assertEqual(self.s.parse_time_ampm("7:30 PM"), time(19, 30))

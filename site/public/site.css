@@ -1,0 +1,177 @@
+/* SF Music Calendar: page layer on top of typewriter.css (ink on paper, one mono font, no radii, no icons). */
+
+:root {
+  --page: 960px;
+  --bar-h: 0px; /* set from JS so day headers stick just below the filter bar */
+}
+
+body { font-size: 15px; }
+
+.page { max-width: var(--page); margin: 0 auto; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.top { padding: 4px 0 14px; }
+.top h1 { font-size: clamp(28px, 4.5vw, 44px); font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+.status { font-size: 13px; letter-spacing: 0.04em; color: var(--tw-muted); }
+.status a { color: inherit; }
+.status .old { color: var(--tw-error); }
+
+/* ── Filter bar ─────────────────────────────────────────── */
+
+.bar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--tw-paper);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--tw-ink);
+  display: grid; gap: 10px;
+}
+.bar-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+.search { flex: 1 1 240px; min-width: 0; display: flex; }
+#q { height: 40px; padding: 0 12px; }
+#q::placeholder { color: var(--tw-muted); opacity: 1; }
+#q::-webkit-search-cancel-button { filter: grayscale(1); }
+
+.when .tw-toggle-opt { height: 38px; padding: 0 12px; white-space: nowrap; }
+.tw-toggle-opt:hover:not(.tw-toggle-on) { background: var(--tw-hover); }
+
+.venue-btn {
+  height: 40px; padding: 0 14px; white-space: nowrap;
+  text-transform: lowercase; letter-spacing: 0.04em;
+}
+.venue-btn:hover, .venue-btn[aria-expanded="true"] { background: var(--tw-hover); }
+.venue-btn.filtered { background: var(--tw-ink); color: var(--tw-paper); }
+.venue-btn .short { display: none; }
+
+.panel {
+  border: 1px solid var(--tw-ink);
+  padding: 12px;
+  max-height: min(55vh, 440px);
+  overflow-y: auto;
+  display: grid; gap: 12px;
+}
+.panel[hidden] { display: none; }
+
+/* Month calendar: drops down under the when-toggle; days with shows in ink, the rest greyed out */
+.when-wrap { position: relative; display: flex; }
+.date-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
+  width: 340px; max-height: none;
+  background: var(--tw-paper);
+}
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow {
+  padding-bottom: 2px; text-align: center;
+  font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tw-muted);
+}
+.cal-day { height: 40px; padding: 0; font-size: 14px; border: 1px solid var(--tw-rule); }
+.cal-day:hover:not(:disabled) { border-color: var(--tw-ink); background: var(--tw-hover); }
+.cal-day:disabled { border-color: transparent; color: #b5b5b5; opacity: 1; cursor: default; }
+.cal-day.today { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.cal-day[aria-pressed="true"] { background: var(--tw-ink); border-color: var(--tw-ink); color: var(--tw-paper); }
+.when .short { display: none; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.panel-actions { display: flex; gap: 16px; }
+
+.textbtn {
+  border: none; background: none; padding: 2px 0; cursor: pointer;
+  font-size: 13px; letter-spacing: 0.04em; text-transform: lowercase;
+  text-decoration: underline; text-underline-offset: 3px; color: var(--tw-ink);
+}
+.textbtn:hover { color: var(--tw-muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 6px 10px; font-size: 13px; letter-spacing: 0.02em;
+  border: 1px solid var(--tw-rule); text-align: left;
+}
+.chip:hover { border-color: var(--tw-ink); }
+.chip .n { color: var(--tw-muted); margin-left: 6px; }
+.chip[aria-pressed="true"] { background: var(--tw-ink); border-color: var(--tw-ink); color: var(--tw-paper); }
+.chip[aria-pressed="true"] .n { color: #bdbdbd; }
+
+/* ── Listings ───────────────────────────────────────────── */
+
+.loading, .empty { padding: 32px 0; }
+.empty { font-size: 14px; color: var(--tw-dim); }
+
+.day {
+  position: sticky; top: var(--bar-h); z-index: 5;
+  background: var(--tw-paper);
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 0; padding: 20px 6px 8px;
+  border-bottom: 1px solid var(--tw-ink);
+  font-size: 13px; font-weight: 400;
+}
+.day-name { text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
+.day-date { color: var(--tw-dim); letter-spacing: 0.04em; }
+
+.show {
+  display: grid;
+  grid-template-columns: 6ch minmax(0, 1fr) 13.5rem 7rem;
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 11px 6px;
+  border-bottom: 1px solid var(--tw-rule);
+  color: inherit; text-decoration: none;
+}
+a.show:hover { background: var(--tw-hover); }
+a.show:focus-visible { outline: 1px solid var(--tw-ink); outline-offset: -1px; }
+
+.time { font-size: 13px; color: var(--tw-dim); white-space: nowrap; }
+.head { text-transform: uppercase; font-weight: 700; letter-spacing: 0.02em; overflow-wrap: anywhere; }
+.with { display: block; margin-top: 3px; font-size: 13px; color: var(--tw-muted); overflow-wrap: anywhere; }
+.where { font-size: 14px; }
+.price {
+  font-size: 13px; color: var(--tw-dim); text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+
+.foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--tw-ink); display: grid; gap: 14px; }
+.venue-index {
+  list-style: none; margin: 0; padding: 0;
+  columns: 3 16rem; column-gap: 24px;
+  font-size: 13px; line-height: 1.9;
+}
+.venue-index li { break-inside: avoid; }
+.venue-index a { color: var(--tw-ink); text-underline-offset: 3px; }
+.venue-index .tw-muted { margin-left: 6px; }
+.venue-index .stale { color: var(--tw-error); margin-left: 6px; }
+.foot-note { font-size: 13px; color: var(--tw-muted); max-width: 60ch; padding-bottom: 24px; }
+
+/* ── Phones ─────────────────────────────────────────────── */
+
+/* Phones: the filters scroll away with the page (set once, then scan) and
+   only the day header stays pinned; each show is "time venue price" over the lineup. */
+@media (max-width: 680px) {
+  .bar { position: static; padding: 10px 0; gap: 8px; }
+  .bar-row { gap: 8px; }
+  .search { flex-basis: 100%; }
+  .when-wrap, .when { flex: 1 1 auto; }
+  .when .tw-toggle-opt { flex: 1 1 auto; padding: 0 5px; font-size: 14px; letter-spacing: 0; }
+  .venue-btn { padding: 0 8px; font-size: 14px; letter-spacing: 0; }
+  .venue-btn .long, .when .long { display: none; }
+  .venue-btn .short, .when .short { display: inline; }
+  .date-panel { left: 0; right: auto; width: calc(100vw - 32px); }
+
+  .day { top: 0; padding: 18px 2px 6px; }
+
+  .show { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 4px; padding: 10px 2px; }
+  .time { order: 1; }
+  .time:empty { display: none; }
+  .where { order: 2; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: var(--tw-dim); }
+  .price { order: 3; }
+  .acts { order: 4; flex-basis: 100%; }
+  .with { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+@media (max-width: 360px) {
+  .when .tw-toggle-opt, .venue-btn { padding: 0 4px; font-size: 13px; }
+}

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SF Music Calendar</title>
+  <meta name="description" content="Upcoming shows at San Francisco music venues, refreshed weekly.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="typewriter.css?v=__VERSION__">
+  <link rel="stylesheet" href="site.css?v=__VERSION__">
+  <link rel="preload" href="events.json?v=__VERSION__" as="fetch" crossorigin>
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <h1>SF Music Calendar</h1>
+      <p class="status" id="status">&nbsp;</p>
+    </header>
+
+    <div class="bar" id="bar">
+      <div class="bar-row">
+        <label class="search">
+          <span class="visually-hidden">Search artists or venues</span>
+          <input id="q" type="search" placeholder="search artists or venues" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        </label>
+        <div class="when-wrap">
+          <div class="tw-toggle when" id="when" role="group" aria-label="When">
+            <button type="button" class="tw-toggle-opt" data-when="all">all</button>
+            <button type="button" class="tw-toggle-opt" data-when="tonight">tonight</button>
+            <button type="button" class="tw-toggle-opt" data-when="weekend">weekend</button>
+            <button type="button" class="tw-toggle-opt" data-when="date" id="date-btn" aria-expanded="false" aria-controls="date-panel">date ▾</button>
+          </div>
+          <div class="panel date-panel" id="date-panel" hidden>
+            <div class="panel-head">
+              <span class="tw-label" id="cal-title"></span>
+              <span class="panel-actions">
+                <button type="button" class="textbtn" data-cal="-1">prev</button>
+                <button type="button" class="textbtn" data-cal="1">next</button>
+              </span>
+            </div>
+            <div class="cal" id="cal" role="grid" aria-labelledby="cal-title"></div>
+          </div>
+        </div>
+        <button type="button" class="venue-btn" id="venue-btn" aria-expanded="false" aria-controls="venue-panel">all venues ▾</button>
+      </div>
+      <div class="panel" id="venue-panel" hidden>
+        <div class="panel-head">
+          <span class="tw-label">venues</span>
+          <span class="panel-actions">
+            <button type="button" class="textbtn" data-action="all-venues">show all</button>
+            <button type="button" class="textbtn" data-action="close-venues">done</button>
+          </span>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+
+    <main id="list" aria-live="polite">
+      <p class="tw-waiting loading">loading shows<span class="tw-dots"></span></p>
+    </main>
+
+    <footer class="foot">
+      <h2 class="tw-label">venues</h2>
+      <ul class="venue-index" id="venue-index"></ul>
+      <p class="foot-note">Listings come from each venue's own calendar and refresh every Sunday. Check the venue before you go.</p>
+    </footer>
+  </div>
+  <script src="app.js?v=__VERSION__"></script>
+</body>
+</html>

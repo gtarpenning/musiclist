@@ -44,6 +44,8 @@ YEAR_ROLLOVER_GRACE = timedelta(days=7)
 ANCHOR_LOOKBACK = timedelta(days=90)
 # Within an ordered listing, a step back larger than this is a year wrap
 ORDER_BACKSTEP = timedelta(days=45)
+# Field labels some ticketing plugins leave on the support line
+SUPPORT_LABEL = re.compile(r"^(supporting talent|support|special guests?)\s*:\s*", re.I)
 
 MONTHS = {
     "january": 1,
@@ -107,7 +109,8 @@ class BaseScraper(ABC):
                     response = requests.get(
                         url, params=params, headers=profile, timeout=REQUEST_TIMEOUT
                     )
-                    if response.status_code in (403, 429, 503):
+                    # bot filters: Cloudflare 403s, the Warfield's AXS front end 406s
+                    if response.status_code in (403, 406, 429, 503):
                         last_error = f"HTTP {response.status_code}"
                         continue
                     response.raise_for_status()
@@ -399,12 +402,33 @@ class BaseScraper(ABC):
     def dedupe_artists(artists: Iterable[str]) -> List[str]:
         seen = set()
         result = []
-        for artist in artists:
-            artist = re.sub(r"\s+", " ", artist).strip(" ,;/|-")
-            if artist and artist.lower() not in seen:
-                seen.add(artist.lower())
-                result.append(artist)
+        # Storage joins a lineup with ", " and splits it again on read, so split
+        # the same way here or "A, B" + "B" turns into a duplicate later.
+        parts = (
+            p for artist in artists for p in re.sub(r"\s+", " ", artist).split(", ")
+        )
+        for artist in parts:
+            artist = artist.strip(" ,;/|-")
+            artist = SUPPORT_LABEL.sub("", artist)
+            if not artist or artist.lower() in seen:
+                continue
+            if result and BaseScraper.restates(result[0], artist):
+                continue  # "Starpine : LIVE", "Chelsea Cutler - The X Tour"
+            seen.add(artist.lower())
+            result.append(artist)
         return result
+
+    @staticmethod
+    def restates(head: str, other: str) -> bool:
+        """True if `other` is the headliner again plus a tour/billing suffix.
+
+        "Kaufmann (DE)" restates "KAUFMANN"; "Bob Mould" does not restate "Bob".
+        """
+        h, o = head.lower(), other.lower()
+        if not o.startswith(h):
+            return False
+        rest = o[len(h) :].lstrip()
+        return not rest or not rest[0].isalnum()
 
     def clean_artist_names(self, artist_text: str) -> List[str]:
         """Clean and split artist names, removing common venue additions"""

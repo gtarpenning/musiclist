@@ -1,0 +1,476 @@
+/* ==========================================================
+   TYPEWRITER — Design System v1.0
+   https://github.com/ez-gz/styles/tree/main/typewriter
+
+   Font: https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap
+   ========================================================== */
+
+:root {
+  /* Colors */
+  --tw-ink:        #111;
+  --tw-paper:      #fff;
+  --tw-muted:      #555;
+  --tw-dim:        #333;
+  --tw-rule:       #d0d0d0;
+  --tw-hover:      #f5f5f5;
+  --tw-active-bg:  #f7f7f7;
+  --tw-error:      #7a0000;
+
+  /* Typography */
+  --tw-font: "Courier Prime", "IBM Plex Mono", ui-monospace,
+             SFMono-Regular, Menlo, Monaco, Consolas,
+             "Liberation Mono", monospace;
+
+  /* Spacing */
+  --tw-pad-sm:  8px;
+  --tw-pad-md:  12px;
+  --tw-pad-lg:  24px;
+  --tw-gap-xs:  4px;
+  --tw-gap-sm:  6px;
+  --tw-gap-md:  8px;
+  --tw-gap-lg:  10px;
+  --tw-gap-xl:  12px;
+
+  /* Layout */
+  --tw-max-width:       720px;
+  --tw-max-width-wide:  1100px;
+
+  color-scheme: light;
+  font-family: var(--tw-font);
+  background: var(--tw-paper);
+  color: var(--tw-ink);
+  line-height: 1.45;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  min-height: 100%;
+  background: var(--tw-paper);
+}
+
+body {
+  padding: var(--tw-pad-lg);
+  background:
+    linear-gradient(180deg, #fff 0%, #fafafa 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0,0,0,0.025) 0 1px,
+      transparent 1px 64px
+    );
+  background-blend-mode: normal;
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+
+h1, h2, h3, p { margin: 0; }
+
+/* ── Form controls ───────────────────────────────────────── */
+
+button, input, textarea {
+  font: inherit;
+  border: 1px solid var(--tw-ink);
+  border-radius: 0;
+  background: var(--tw-paper);
+  color: var(--tw-ink);
+}
+
+button {
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input:focus,
+textarea:focus {
+  outline: 1px solid var(--tw-ink);
+  outline-offset: -1px;
+}
+
+button:focus-visible {
+  outline: 1px solid var(--tw-ink);
+  outline-offset: -1px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px 12px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 160px;
+}
+
+/* ── Control row ─────────────────────────────────────────── */
+
+/* A flex row that aligns mixed controls (inputs, selects, toggles)
+   to a shared 38px height. flex: 1 1 0 on any child fills remaining space. */
+.tw-control-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Children that should fill remaining horizontal space: flex: 1 1 0; min-width: 0 */
+
+/* ── Layout shells ───────────────────────────────────────── */
+
+.tw-shell {
+  max-width: var(--tw-max-width);
+  margin: 0 auto;
+  min-height: calc(100vh - 48px);
+  display: grid;
+  place-items: center;
+}
+
+.tw-shell-wide {
+  max-width: var(--tw-max-width-wide);
+}
+
+.tw-app-card {
+  width: 100%;
+  padding: var(--tw-pad-lg);
+}
+
+/* ── Containers ──────────────────────────────────────────── */
+
+.tw-panel {
+  border: 1px solid var(--tw-ink);
+  padding: var(--tw-pad-lg);
+  background: var(--tw-paper);
+}
+
+.tw-card {
+  border: 1px solid var(--tw-rule);
+  padding: 10px var(--tw-pad-md);
+  display: grid;
+  gap: var(--tw-gap-sm);
+}
+
+.tw-card-active {
+  border-color: var(--tw-ink);
+  background: var(--tw-active-bg);
+}
+
+/* ── Section blocks ──────────────────────────────────────── */
+
+.tw-section {
+  margin-top: var(--tw-pad-lg);
+  padding-top: 18px;
+  border-top: 1px solid var(--tw-ink);
+  display: grid;
+  gap: var(--tw-gap-lg);
+}
+
+/* ── Typography ──────────────────────────────────────────── */
+
+.tw-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  margin-bottom: var(--tw-pad-md);
+}
+
+h1, .tw-h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 500;
+  margin-bottom: var(--tw-pad-md);
+}
+
+.tw-lede {
+  margin-top: var(--tw-pad-sm);
+  max-width: 38ch;
+  font-size: 15px;
+  color: var(--tw-dim);
+}
+
+.tw-label {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+}
+
+.tw-muted { color: var(--tw-muted); }
+.tw-dim   { color: var(--tw-dim);   }
+
+.tw-meta {
+  font-size: 13px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+
+.tw-speaker { font-weight: 600; }
+
+/* ── Inline badges ───────────────────────────────────────── */
+
+.tw-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--tw-ink);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.tw-badge-inverted {
+  background: var(--tw-ink);
+  color: var(--tw-paper);
+}
+
+.tw-badge-dashed {
+  border-style: dashed;
+  color: var(--tw-muted);
+}
+
+/* ── Status / feedback ───────────────────────────────────── */
+
+.tw-alert {
+  margin-top: var(--tw-pad-md);
+  font-size: 13px;
+  color: var(--tw-error);
+}
+
+.tw-waiting {
+  text-transform: lowercase;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--tw-dim);
+}
+
+.tw-button-hint {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--tw-muted);
+}
+
+/* ── Story / content reveal ──────────────────────────────── */
+
+.tw-story {
+  gap: var(--tw-pad-md);
+}
+
+.tw-story-heading {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tw-story-copy {
+  min-height: 3.5em;
+  transition: opacity 140ms linear;
+}
+
+.tw-story-revealing { opacity: 0.92; }
+.tw-story-complete   { opacity: 1;    }
+.tw-story-highlight  { font-weight: 700; }
+
+/* ── Rows & flex layouts ─────────────────────────────────── */
+
+.tw-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tw-gap-xl);
+}
+
+.tw-join-block {
+  display: grid;
+  gap: var(--tw-pad-sm);
+}
+
+/* ── Tables ──────────────────────────────────────────────── */
+
+.tw-table-wrap {
+  margin-top: var(--tw-pad-lg);
+  overflow-x: auto;
+}
+
+.tw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tw-table th,
+.tw-table td {
+  border: 1px solid var(--tw-ink);
+  padding: 10px var(--tw-pad-md);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tw-table tr[data-clickable] { cursor: pointer; }
+.tw-table tr[data-clickable]:hover { background: var(--tw-hover); }
+
+/* ── Typewriter dot animation ────────────────────────────── */
+
+@keyframes tw-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.tw-cursor::after {
+  content: "▎";
+  animation: tw-blink 1s step-end infinite;
+}
+
+/* ── Loading dots (CSS version) ──────────────────────────── */
+
+.tw-dots::after {
+  content: "";
+  animation: tw-dot-cycle 1.35s steps(1) infinite;
+}
+
+@keyframes tw-dot-cycle {
+  0%   { content: ".";   }
+  33%  { content: "..";  }
+  66%  { content: "..."; }
+}
+
+/* ── Toggle ──────────────────────────────────────────────── */
+
+.tw-toggle {
+  display: inline-flex;
+  border: 1px solid var(--tw-ink);
+}
+
+.tw-toggle-opt {
+  border: none;
+  border-right: 1px solid var(--tw-ink);
+  padding: 8px 14px;
+  background: var(--tw-paper);
+  color: var(--tw-ink);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.tw-toggle-opt:last-child {
+  border-right: none;
+}
+
+.tw-toggle-opt:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tw-toggle-on {
+  background: var(--tw-ink);
+  color: var(--tw-paper);
+}
+
+/* ── Custom Select ───────────────────────────────────────── */
+
+.tw-cselect { position: relative; display: inline-block; min-width: 160px; }
+.tw-cselect-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--tw-ink); background: var(--tw-paper); color: var(--tw-ink); cursor: pointer; font: inherit; text-align: left; letter-spacing: 0.04em; border-radius: 0; }
+.tw-cselect-btn:hover { background: var(--tw-hover); }
+.tw-cselect-arrow { font-size: 12px; flex-shrink: 0; transition: transform 80ms linear; }
+.tw-cselect[data-open] .tw-cselect-arrow { transform: rotate(180deg); }
+.tw-cselect-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; display: none; border: 1px solid var(--tw-ink); border-top: none; background: var(--tw-paper); max-height: 280px; overflow-y: auto; }
+.tw-cselect[data-open] .tw-cselect-menu { display: block; }
+.tw-cselect-opt { display: block; width: 100%; padding: 10px 12px; background: none; border: none; border-bottom: 1px solid var(--tw-rule); text-align: left; cursor: pointer; font: inherit; font-size: 14px; letter-spacing: 0.04em; color: var(--tw-ink); }
+.tw-cselect-opt:last-child { border-bottom: none; }
+.tw-cselect-opt:hover { background: var(--tw-hover); }
+.tw-cselect-opt[data-selected] { background: var(--tw-active-bg); font-weight: 600; }
+
+/* ── Radio ───────────────────────────────────────────────── */
+
+.tw-radio-opt { display: flex; align-items: baseline; gap: 8px; cursor: pointer; user-select: none; font-size: 14px; }
+.tw-radio-opt input[type="radio"] { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; min-width: 14px; border: 1px solid var(--tw-ink); background: var(--tw-paper); position: relative; top: 1px; cursor: pointer; border-radius: 0; margin: 0; flex-shrink: 0; }
+.tw-radio-opt input[type="radio"]:checked::after { content: ""; position: absolute; inset: 2px; background: var(--tw-ink); }
+
+/* ── Breadcrumb ──────────────────────────────────────────── */
+
+.tw-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; letter-spacing: 0.04em; flex-wrap: wrap; }
+.tw-breadcrumb a { color: var(--tw-muted); text-decoration: none; }
+.tw-breadcrumb a:hover { color: var(--tw-ink); }
+.tw-breadcrumb-sep { color: var(--tw-rule); }
+
+/* ── Toast ───────────────────────────────────────────────── */
+
+.tw-toast { border: 1px solid var(--tw-ink); padding: 12px 16px; background: var(--tw-paper); display: grid; gap: 2px; }
+.tw-toast-title { font-weight: 600; font-size: 13px; }
+.tw-toast-body { font-size: 13px; color: var(--tw-dim); }
+.tw-toast-error { border-color: var(--tw-error); }
+.tw-toast-error .tw-toast-title { color: var(--tw-error); }
+
+/* ── Progress ────────────────────────────────────────────── */
+
+.tw-progress { font-size: 13px; display: grid; gap: 4px; }
+.tw-progress-track { letter-spacing: -0.04em; }
+.tw-progress-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tw-muted); }
+
+/* ── Stepper ─────────────────────────────────────────────── */
+
+.tw-stepper { display: flex; align-items: flex-start; }
+.tw-step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tw-step-num { width: 28px; height: 28px; border: 1px solid var(--tw-rule); display: flex; align-items: center; justify-content: center; font-size: 12px; background: var(--tw-paper); color: var(--tw-muted); flex-shrink: 0; }
+.tw-step-active .tw-step-num { border-color: var(--tw-ink); background: var(--tw-ink); color: var(--tw-paper); }
+.tw-step-done .tw-step-num { border-color: var(--tw-ink); color: var(--tw-ink); }
+.tw-step-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tw-muted); white-space: nowrap; }
+.tw-step-active .tw-step-label { color: var(--tw-ink); }
+.tw-step-done .tw-step-label { color: var(--tw-dim); }
+.tw-step-line { flex: 1; height: 1px; background: var(--tw-rule); margin-top: 14px; min-width: 20px; }
+.tw-step-line-done { background: var(--tw-ink); }
+
+/* ── Accordion ───────────────────────────────────────────── */
+
+.tw-accordion { border: 1px solid var(--tw-ink); }
+.tw-accordion-item { border-bottom: 1px solid var(--tw-ink); }
+.tw-accordion-item:last-child { border-bottom: none; }
+.tw-accordion-trigger { width: 100%; padding: 12px 14px; background: none; border: none; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; font: inherit; font-size: 14px; letter-spacing: 0.04em; }
+.tw-accordion-trigger:hover { background: var(--tw-hover); }
+.tw-accordion-icon { flex-shrink: 0; font-size: 14px; color: var(--tw-muted); transition: transform 80ms linear; }
+.tw-accordion-content { display: none; padding: 0 14px 14px; font-size: 13px; color: var(--tw-dim); line-height: 1.7; }
+.tw-accordion-item[data-open] .tw-accordion-icon { transform: rotate(45deg); }
+.tw-accordion-item[data-open] .tw-accordion-content { display: block; }
+
+/* ── Tag ─────────────────────────────────────────────────── */
+
+.tw-tag { display: inline-flex; align-items: center; border: 1px solid var(--tw-rule); padding: 2px 4px 2px 8px; gap: 4px; font-size: 12px; letter-spacing: 0.06em; }
+.tw-tag-remove { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--tw-muted); font-size: 14px; line-height: 1; font: inherit; }
+.tw-tag-remove:hover { color: var(--tw-ink); }
+
+/* ── Dropdown Menu ───────────────────────────────────────── */
+
+.tw-dropdown-menu { border: 1px solid var(--tw-ink); background: var(--tw-paper); min-width: 180px; }
+.tw-dropdown-item { display: block; width: 100%; padding: 10px 14px; background: none; border: none; border-bottom: 1px solid var(--tw-rule); text-align: left; cursor: pointer; font: inherit; font-size: 13px; letter-spacing: 0.04em; color: var(--tw-ink); }
+.tw-dropdown-item:last-child { border-bottom: none; }
+.tw-dropdown-item:hover { background: var(--tw-hover); }
+.tw-dropdown-item-active { background: var(--tw-active-bg); font-weight: 600; }
+.tw-dropdown-item-danger { color: var(--tw-error); }
+
+/* ── Code Block ──────────────────────────────────────────── */
+
+.tw-code-block { border: 1px solid var(--tw-ink); }
+.tw-code-header { background: var(--tw-ink); color: var(--tw-paper); padding: 7px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: 0.08em; }
+.tw-code-lang { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; opacity: 0.45; }
+.tw-code-body { background: var(--tw-active-bg); padding: 10px 0; overflow-x: auto; }
+.tw-code-table { border-collapse: collapse; font: 13px/1.8 var(--tw-font); white-space: pre; width: 100%; }
+.tw-code-ln { padding: 0 14px 0 12px; color: var(--tw-muted); text-align: right; user-select: none; border-right: 1px solid var(--tw-rule); font-size: 11px; vertical-align: top; min-width: 36px; }
+.tw-code-line { padding: 0 16px; vertical-align: top; }
+.tw-code-inline { background: var(--tw-active-bg); border: 1px solid var(--tw-rule); padding: 1px 5px; font-size: 0.9em; font-family: var(--tw-font); }
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  body { padding: 16px; }
+  .tw-shell { min-height: calc(100vh - 32px); }
+  .tw-panel { padding: 20px; }
+}

@@ -63,7 +63,7 @@ Venue-specific: Café du Nord / Swedish American Hall (one page, `data-room`), A
 - `scrape()` raises `ScrapeError` on fetch failure; `get_events()` swallows it and returns `[]`
 - `_get()` walks `HEADER_PROFILES` for `FETCH_ROUNDS` rounds with backoff (Cloudflare scores some UAs as bots, intermittently)
 - `fetch_page()` / `fetch_json()` go through the page cache unless `force_refresh`
-- `make_event()` drops incomplete listings and dedupes artists
+- `make_event()` drops incomplete listings and dedupes artists (`dedupe_artists()` also strips "Supporting Talent:" labels and drops a support entry that just restates the headliner)
 - Dates: `parse_month_day()` (no year), `parse_date_text()`, `parse_iso_datetime()` (converts to America/Los_Angeles; midnight = no time)
 - **Yearless dates**: use `assign_years_in_order()` for any listing in date order. The first entry is anchored at most 90 days back; later entries only move forward (a step back of more than 45 days is a year wrap). `infer_year()` (7-day grace) is only for isolated dates.
 - Text: `split_lineup()` (keeps "Simon & Garfunkel" and "AC/DC" intact), `parse_time_ampm()`, `extract_price_from_text()`
@@ -73,6 +73,12 @@ Venue-specific: Café du Nord / Swedish American Hall (one page, `data-room`), A
 2. If it matches, add a `VENUES_CONFIG` entry pointing at the shared scraper. Done.
 3. Otherwise write a scraper with `parse_events(html) -> List[Event]` using the base helpers, and add a fixture test in `tests/test_scrapers.py`.
 4. Run `music doctor <venue>`: shows, last date, and time/price coverage should look right.
+
+## Website (`site/`)
+- `site/build.py`: scrapes all venues (parallel, then one sequential retry pass for failures) into its own `MUSICLIST_HOME` (default `~/.musiclist-site`, separate from the CLI's pins and stars), exports `dist/events.json` (venues with `area`/`stale`, events pointing at venues by index, prices tidied), copies `site/public/` and stamps a content hash on asset URLs. `--deploy` publishes to the Cloudflare Pages project `sf-music-calendar` with `npx wrangler@4 pages deploy`, but only when ≥60% of venues refreshed and ≥150 shows exist; otherwise the live site keeps last week's build.
+- `site/public/`: static page in the typewriter design system (`typewriter.css` vendored from ez-gz/styles; `site.css` is the page layer). `app.js` does all filtering client-side in America/Los_Angeles dates; filters are mirrored into the URL (`q`, `when`, `date`, `venues`), and the venue choice is remembered in localStorage.
+- `site/weekly.sh` + `site/install-weekly.sh`: LaunchAgent `local.musiclist-site` (Sundays 9:00) keeps a managed clone in `~/.musiclist-site/repo`, a venv from pyenv 3.13.2 (OpenSSL 3, needed for Rickshaw Stop), and logs to `~/.musiclist-site/weekly.log`. A failed run posts a macOS notification.
+- A venue that fails keeps its previous rows (the DB only prunes on success) and is listed as "not refreshed" on the page.
 
 ## Testing
 ```bash
