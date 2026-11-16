@@ -29,6 +29,9 @@ notify_failure() {
 }
 trap 'notify_failure $?' ERR
 
+mkdir -p "$SITE_HOME"
+cd "$SITE_HOME"  # launchd starts jobs in "/", where tools can't write their caches
+
 started=$(date +%s)
 log "weekly refresh starting: branch $BRANCH, data in $SITE_HOME"
 

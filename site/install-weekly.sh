@@ -39,6 +39,8 @@ cat > "$PLIST" <<PLIST
     <string>/bin/bash</string>
     <string>$SITE_HOME/bin/weekly.sh</string>
   </array>
+  <key>WorkingDirectory</key>
+  <string>$SITE_HOME</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>MUSICLIST_BRANCH</key>

@@ -145,3 +145,6 @@ config/local.py
 
 # Claude Code worktrees and local settings
 .claude/
+
+# wrangler (Cloudflare Pages deploys from site/)
+.wrangler/

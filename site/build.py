@@ -173,7 +173,8 @@ def deploy(dist: Path) -> None:
         "--commit-dirty=true", "--commit-message", f"weekly build {datetime.now():%Y-%m-%d}",
     ]  # fmt: skip
     log("deploying: " + " ".join(cmd[1:5]) + f" --project-name {PROJECT}")
-    subprocess.run(cmd, check=True)
+    # wrangler keeps a .wrangler/ cache in its cwd; launchd jobs start in "/", which isn't writable
+    subprocess.run(cmd, check=True, cwd=SITE)
 
 
 def main() -> int:
