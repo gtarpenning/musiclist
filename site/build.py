@@ -33,7 +33,11 @@ os.environ.setdefault("MUSICLIST_HOME", str(Path.home() / ".musiclist-site"))
 from scrapers.nineteenhz import fetch_listings, fill_prices  # noqa: E402
 from storage import Cache, Database  # noqa: E402
 from utils.parallel import refresh_venue  # noqa: E402
-from venues_config import DEFAULT_MAX_WORKERS, get_venues_config  # noqa: E402
+from venues_config import (
+    DEFAULT_CITY,
+    DEFAULT_MAX_WORKERS,
+    get_venues_config,
+)  # noqa: E402
 
 PROJECT = "sf-music-calendar"  # Cloudflare Pages project -> https://sf-music-calendar.pages.dev
 MIN_OK_SHARE = 0.6  # deploy only if at least this share of venues scraped fine...
@@ -130,6 +134,8 @@ def export(configs, db: Database, results, listings=()) -> dict:
             {
                 "name": cfg["name"],
                 "area": cfg.get("area", ""),
+                "city": cfg.get("city", DEFAULT_CITY),
+                "kind": cfg.get("kind", "other"),
                 # home_url: venues read from a listing site link to their own site instead
                 "url": cfg.get("home_url")
                 or cfg["base_url"].rstrip("/") + cfg.get("calendar_path", "/"),

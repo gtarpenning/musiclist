@@ -3,25 +3,44 @@
   "use strict";
 
   const TZ = "America/Los_Angeles";
-  const STORE = "sfmc.venues";
+  const STORE = { venues: "sfmc.venues", city: "sfmc.city", kinds: "sfmc.kinds" };
   const WHENS = ["all", "tonight", "weekend", "date"];
   const OLD_AFTER_DAYS = 9; // the job runs weekly; past this the refresh is probably stuck
+  const HOME = "sf"; // the city shown until another is ticked
+  const EAST_BAY = ["Oakland", "Berkeley"]; // all of these ticked reads "East Bay"
+  // venue kinds (venues_config.py), in filter order
+  const KINDS = {
+    bar: "bars", club: "clubs", small: "small venues", mid: "mid-size venues",
+    large: "large venues", arena: "arenas", other: "other",
+  };
+  const KIND_SHORT = { small: "small", mid: "mid-size", large: "large" }; // phone button labels
 
   const $ = (sel) => document.querySelector(sel);
   const el = {
     status: $("#status"), bar: $("#bar"), q: $("#q"), when: $("#when"),
     dateBtn: $("#date-btn"), datePanel: $("#date-panel"), cal: $("#cal"), calTitle: $("#cal-title"),
+    cityBtn: $("#city-btn"), cityPanel: $("#city-panel"), cityOpts: $("#city-opts"),
+    kindBtn: $("#kind-btn"), kindPanel: $("#kind-panel"), kindOpts: $("#kind-opts"),
     venueBtn: $("#venue-btn"), venuePanel: $("#venue-panel"), chips: $("#chips"),
     list: $("#list"), index: $("#venue-index"),
   };
+  const PANELS = {
+    date: [el.datePanel, el.dateBtn], city: [el.cityPanel, el.cityBtn],
+    kinds: [el.kindPanel, el.kindBtn], venues: [el.venuePanel, el.venueBtn],
+  };
 
   // when: "all" | "tonight" | "weekend" | "date" (then `date` holds the picked day)
-  const state = { q: "", when: "all", date: null, venues: new Set() };
+  // cities scope everything (never empty); kinds: empty = all; venues: empty = all shown
+  const state = { q: "", when: "all", date: null, cities: new Set([HOME]), kinds: new Set(), venues: new Set() };
   let venues = [];
   let events = [];
+  let cities = []; // [{key, name}] in data order, home first
+  let kinds = []; // kind keys present in the data, in KINDS order
+  let order = []; // venue indexes, alphabetical
+  let counts = []; // upcoming shows per venue
   let generated = null;
   let calMonth = null; // "YYYY-MM" shown in the date picker
-  let openPanel = null; // "date" | "venues" | null
+  let openPanel = null; // a PANELS key or null
 
   // ── helpers ────────────────────────────────────────────
 
@@ -95,6 +114,41 @@
     return { text, old: days > OLD_AFTER_DAYS };
   }
 
+  const cityKey = (city) => (city === "San Francisco" ? HOME : slug(city));
+  const inScope = (v) => state.cities.has(v.cityKey);
+  const shown = (v) => inScope(v) && (!state.kinds.size || state.kinds.has(v.kind));
+
+  // A picked venue the city or kind filters now hide is dropped, so "1 venue" never means "nothing".
+  function pruneVenues() {
+    for (const i of state.venues) if (!shown(venues[i])) state.venues.delete(i);
+  }
+
+  function cityLabel() {
+    const on = cities.filter((c) => state.cities.has(c.key));
+    const east = cities.filter((c) => EAST_BAY.includes(c.name));
+    const allEast = east.length > 1 && east.every((c) => state.cities.has(c.key));
+    const names = on
+      .filter((c) => !(allEast && EAST_BAY.includes(c.name)))
+      .map((c) => (c.key === HOME ? "SF" : c.name));
+    if (allEast) names.push("East Bay");
+    return names.join(" + ");
+  }
+
+  function kindLabel() {
+    const n = state.kinds.size;
+    if (!n) return { long: "all kinds", short: "kinds" };
+    const short = (k) => KIND_SHORT[k] || KINDS[k];
+    if (n === 1) {
+      const only = [...state.kinds][0];
+      return { long: KINDS[only], short: short(only) };
+    }
+    if (n === kinds.length - 1) {
+      const off = kinds.find((k) => !state.kinds.has(k));
+      return { long: `no ${KINDS[off]}`, short: `no ${short(off)}` };
+    }
+    return { long: `${n} kinds`, short: `${n} kinds` };
+  }
+
   // ── state <-> URL / storage ────────────────────────────
 
   function readState() {
@@ -108,19 +162,31 @@
       const when = params.get("when");
       state.when = WHENS.includes(when) && when !== "date" ? when : "all";
     }
-    const fromUrl = params.get("venues");
-    const slugs = (fromUrl ?? store.get(STORE) ?? "").split(",").filter(Boolean);
+    // where-filters come from the URL, else from this browser's last visit
+    const list = (name, key) => (params.get(name) ?? store.get(key) ?? "").split(",").filter(Boolean);
+    const cityKeys = new Set(cities.map((c) => c.key));
+    const picked = list("city", STORE.city).filter((k) => cityKeys.has(k));
+    state.cities = new Set(picked.length ? picked : [HOME]);
+    const kindSet = list("kinds", STORE.kinds).filter((k) => kinds.includes(k));
+    state.kinds = new Set(kindSet.length === kinds.length ? [] : kindSet);
     const bySlug = new Map(venues.map((v, i) => [v.slug, i]));
-    state.venues = new Set(slugs.map((s) => bySlug.get(s)).filter((i) => i !== undefined));
+    state.venues = new Set(list("venues", STORE.venues).map((s) => bySlug.get(s)).filter((i) => i !== undefined));
+    pruneVenues();
   }
 
   function writeState() {
     const chosen = [...state.venues].map((i) => venues[i].slug).join(",");
-    store.set(STORE, chosen);
+    const city = cities.filter((c) => state.cities.has(c.key)).map((c) => c.key).join(",");
+    const kind = kinds.filter((k) => state.kinds.has(k)).join(",");
+    store.set(STORE.venues, chosen);
+    store.set(STORE.city, city);
+    store.set(STORE.kinds, kind);
     const params = new URLSearchParams();
     if (state.q.trim()) params.set("q", state.q.trim());
     if (state.when === "date") params.set("date", state.date);
     else if (state.when !== "all") params.set("when", state.when);
+    if (city !== HOME) params.set("city", city);
+    if (kind) params.set("kinds", kind);
     if (chosen) params.set("venues", chosen);
     const qs = params.toString();
     history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
@@ -128,12 +194,13 @@
 
   // ── filtering ──────────────────────────────────────────
 
-  // Venue + search filters only; the calendar uses this to mark which days have matching shows.
+  // Every filter but the date; the calendar uses this to mark which days have matching shows.
   function matchesExceptDate(today) {
     const terms = fold(state.q).split(/\s+/).filter(Boolean);
     return events.filter(
       (e) =>
         e.date >= today &&
+        shown(venues[e.venue]) &&
         (!state.venues.size || state.venues.has(e.venue)) &&
         terms.every((t) => e.hay.includes(t)),
     );
@@ -188,14 +255,16 @@
     return shown;
   }
 
+  // Counts are within the chosen cities; the other filters show as "n of total".
   function renderStatus(shownCount, today) {
-    const upcoming = events.filter((e) => e.date >= today).length;
-    const stale = venues.filter((v) => v.stale).length;
-    const filtered = state.q.trim() || state.when !== "all" || state.venues.size;
+    const upcoming = events.filter((e) => e.date >= today && inScope(venues[e.venue])).length;
+    const scoped = venues.filter(inScope);
+    const stale = scoped.filter((v) => v.stale).length;
+    const filtered = state.q.trim() || state.when !== "all" || state.kinds.size || state.venues.size;
     const age = generated ? ago(generated) : null;
     const bits = [
       filtered ? `${plural(shownCount, "show")} of ${upcoming.toLocaleString("en-US")}` : plural(upcoming, "show"),
-      plural(venues.length, "venue"),
+      plural(scoped.length, "venue"),
     ];
     let html = bits.map(esc).join(" · ");
     if (age) html += ` · <span class="${age.old ? "old" : ""}">${esc(age.text)}</span>`;
@@ -241,55 +310,106 @@
       el.dateBtn.textContent = "date ▾";
     }
 
-    for (const b of el.chips.querySelectorAll("[data-venue]")) {
-      b.setAttribute("aria-pressed", String(state.venues.has(Number(b.dataset.venue))));
-    }
+    const label = (btn, long, short) => {
+      btn.innerHTML = `<span class="long">${esc(long)} ▾</span><span class="short">${esc(short)} ▾</span>`;
+    };
+    const city = cityLabel();
+    label(el.cityBtn, city, city);
+    el.cityOpts.innerHTML = cities.map((c) => option("city", c.key, c.name, state.cities.has(c.key), state.cities.size)).join("");
+
+    const on = state.kinds.size ? state.kinds : new Set(kinds);
+    const kind = kindLabel();
+    label(el.kindBtn, kind.long, kind.short);
+    el.kindBtn.classList.toggle("filtered", state.kinds.size > 0);
+    el.kindOpts.innerHTML = kinds.map((k) => option("kind", k, KINDS[k], on.has(k), on.size)).join("");
+    el.kindPanel.querySelector('[data-action="all-kinds"]').hidden = !state.kinds.size;
+
     const n = state.venues.size;
-    const long = n === 0 ? "all venues" : n === 1 ? venues[[...state.venues][0]].name : `${n} venues`;
-    const short = n === 0 ? "venues" : n === 1 ? "1 venue" : `${n} venues`; // phones: fits beside the when-toggle
-    el.venueBtn.innerHTML = `<span class="long">${esc(long)}</span><span class="short">${esc(short)}</span> ▾`;
+    label(
+      el.venueBtn,
+      n === 0 ? "all venues" : n === 1 ? venues[[...state.venues][0]].name : `${n} venues`,
+      n === 0 ? "venues" : n === 1 ? "1 venue" : `${n} venues`,
+    );
     el.venueBtn.classList.toggle("filtered", n > 0);
+    renderChips();
     if (el.q.value !== state.q) el.q.value = state.q;
+  }
+
+  // A checklist row; the last ticked one can't be unticked (no city or kind = nothing to show).
+  function option(name, key, text, checked, checkedCount) {
+    const last = checked && checkedCount === 1;
+    return (
+      `<button type="button" class="opt" role="checkbox" data-${name}="${esc(key)}" aria-checked="${checked}"` +
+      `${last ? " disabled" : ""}>${esc(text)}</button>`
+    );
+  }
+
+  // Venue picker: the venues the city and kind filters leave, grouped by kind.
+  function renderChips() {
+    el.chips.innerHTML = kinds
+      .map((k) => {
+        const items = order.filter((i) => venues[i].kind === k && shown(venues[i]));
+        if (!items.length) return "";
+        const chips = items.map(
+          (i) =>
+            `<button type="button" class="chip" data-venue="${i}" aria-pressed="${state.venues.has(i)}">` +
+            `${esc(venues[i].name)}<span class="n">${counts[i]}</span></button>`,
+        );
+        return `<div class="chip-group"><span class="tw-label">${esc(KINDS[k])}</span><div class="chips">${chips.join("")}</div></div>`;
+      })
+      .join("");
+  }
+
+  // Footer directory: every venue in the chosen cities, by kind.
+  function renderIndex() {
+    el.index.innerHTML = kinds
+      .map((k) => {
+        const items = order.filter((i) => venues[i].kind === k && inScope(venues[i]));
+        if (!items.length) return "";
+        const rows = items.map((i) => {
+          const v = venues[i];
+          const href = safeUrl(v.url);
+          const name = href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(v.name)}</a>` : esc(v.name);
+          const where = v.cityKey === HOME ? v.area : [v.area, v.city].filter(Boolean).join(", ");
+          const meta = [where, plural(counts[i], "show")].filter(Boolean).join(" · ");
+          const stale = v.stale ? `<span class="stale">not refreshed this week</span>` : "";
+          return `<li>${name}<span class="tw-muted">${esc(meta)}</span>${stale}</li>`;
+        });
+        return `<li><span class="tw-label">${esc(KINDS[k])}</span><ul>${rows.join("")}</ul></li>`;
+      })
+      .join("");
   }
 
   function render() {
     const today = todayISO();
     renderControls();
     renderStatus(renderList(today).length, today);
+    renderIndex();
     if (openPanel === "date") renderCalendar(today);
     writeState();
   }
 
-  function buildVenueUi() {
+  function indexVenues() {
     const today = todayISO();
-    const counts = venues.map(() => 0);
+    counts = venues.map(() => 0);
     for (const e of events) if (e.date >= today) counts[e.venue]++;
-    const order = venues.map((_, i) => i).sort((a, b) => sortKey(venues[a].name).localeCompare(sortKey(venues[b].name)));
-
-    el.chips.innerHTML = order
-      .map((i) => `<button type="button" class="chip" data-venue="${i}" aria-pressed="false">${esc(venues[i].name)}<span class="n">${counts[i]}</span></button>`)
-      .join("");
-
-    el.index.innerHTML = order
-      .map((i) => {
-        const v = venues[i];
-        const href = safeUrl(v.url);
-        const name = href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(v.name)}</a>` : esc(v.name);
-        const meta = [v.area, plural(counts[i], "show")].filter(Boolean).join(" · ");
-        const stale = v.stale ? `<span class="stale">not refreshed this week</span>` : "";
-        return `<li>${name}<span class="tw-muted">${esc(meta)}</span>${stale}</li>`;
-      })
-      .join("");
+    order = venues.map((_, i) => i).sort((a, b) => sortKey(venues[a].name).localeCompare(sortKey(venues[b].name)));
+    const seen = [...new Set(venues.map((v) => v.city))];
+    cities = seen
+      .map((name) => ({ name, key: cityKey(name) }))
+      .sort((a, b) => (b.key === HOME) - (a.key === HOME));
+    const present = new Set(venues.map((v) => v.kind));
+    kinds = Object.keys(KINDS).filter((k) => present.has(k));
   }
 
   // ── events ─────────────────────────────────────────────
 
   function setPanel(name) {
     openPanel = name;
-    el.datePanel.hidden = name !== "date";
-    el.venuePanel.hidden = name !== "venues";
-    el.dateBtn.setAttribute("aria-expanded", String(name === "date"));
-    el.venueBtn.setAttribute("aria-expanded", String(name === "venues"));
+    for (const [key, [panel, btn]] of Object.entries(PANELS)) {
+      panel.hidden = key !== name;
+      btn.setAttribute("aria-expanded", String(key === name));
+    }
     if (name === "date") {
       calMonth = null; // reopen on the picked (or current) month
       renderCalendar(todayISO());
@@ -334,7 +454,31 @@
       renderCalendar(todayISO());
     });
 
-    el.venueBtn.addEventListener("click", () => setPanel(openPanel === "venues" ? null : "venues"));
+    for (const [key, [, btn]] of Object.entries(PANELS)) {
+      if (key !== "date") btn.addEventListener("click", () => setPanel(openPanel === key ? null : key));
+    }
+
+    el.cityOpts.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-city]");
+      if (!b || b.disabled) return;
+      const key = b.dataset.city;
+      if (state.cities.has(key)) state.cities.delete(key);
+      else state.cities.add(key);
+      pruneVenues();
+      render();
+    });
+
+    el.kindOpts.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-kind]");
+      if (!b || b.disabled) return;
+      const on = new Set(state.kinds.size ? state.kinds : kinds);
+      const key = b.dataset.kind;
+      if (on.has(key)) on.delete(key);
+      else on.add(key);
+      state.kinds = on.size === kinds.length ? new Set() : on;
+      pruneVenues();
+      render();
+    });
 
     el.chips.addEventListener("click", (ev) => {
       const b = ev.target.closest("[data-venue]");
@@ -348,9 +492,10 @@
     document.addEventListener("click", (ev) => {
       const action = ev.target.closest("[data-action]")?.dataset.action;
       if (action === "all-venues") { state.venues.clear(); render(); }
+      if (action === "all-kinds") { state.kinds.clear(); render(); }
       if (action === "close-venues") setPanel(null);
-      if (action === "reset") {
-        state.q = ""; state.when = "all"; state.date = null; state.venues.clear();
+      if (action === "reset") { // the city stays: it's where you are, not a filter
+        state.q = ""; state.when = "all"; state.date = null; state.kinds.clear(); state.venues.clear();
         render();
       }
       // Clicks re-render the calendar, so test the click path, not the (possibly detached) target.
@@ -363,7 +508,7 @@
       if (ev.key === "/" && !typing) { ev.preventDefault(); el.q.focus(); el.q.select(); }
       if (ev.key === "Escape") {
         if (openPanel) {
-          const btn = openPanel === "date" ? el.dateBtn : el.venueBtn;
+          const btn = PANELS[openPanel][1];
           setPanel(null);
           btn.focus();
         } else if (document.activeElement === el.q && el.q.value) {
@@ -388,22 +533,25 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       generated = data.generated;
-      venues = data.venues.map((v) => ({ ...v, slug: slug(v.name) }));
+      venues = data.venues.map((v) => {
+        const city = v.city || "San Francisco";
+        return { ...v, city, cityKey: cityKey(city), kind: v.kind in KINDS ? v.kind : "other", slug: slug(v.name) };
+      });
       events = data.events
         .filter((e) => venues[e.venue])
-        .map((e) => ({
-          ...e,
-          artists: Array.isArray(e.artists) ? e.artists : [],
-          hay: fold(`${(e.artists || []).join(" ")} ${venues[e.venue].name} ${venues[e.venue].area}`),
-        }))
+        .map((e) => {
+          const v = venues[e.venue];
+          const artists = Array.isArray(e.artists) ? e.artists : [];
+          return { ...e, artists, hay: fold(`${artists.join(" ")} ${v.name} ${v.area} ${v.city}`) };
+        })
         // by day, then by time with untimed (all-day, TBA) shows after the timed ones
         .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "99").localeCompare(b.time ?? "99"));
     } catch (err) {
       el.list.innerHTML = `<p class="tw-alert">Couldn't load the listings (${esc(err.message)}). Reload to try again.</p>`;
       return;
     }
+    indexVenues();
     readState();
-    buildVenueUi();
     render();
   }
 

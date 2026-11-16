@@ -34,15 +34,17 @@ Data (events, pins, stars, page cache) lives in `~/.musiclist`; set
 
 ## Venues
 
-29 venues, most read through the ticketing platform the venue's own site uses:
+32 venues (29 in San Francisco, 3 in the East Bay), most read through the ticketing
+platform the venue's own site uses:
 
 | Platform | Venues |
 | --- | --- |
 | TicketWeb plugin | The Independent, August Hall, Brick & Mortar, Neck of the Woods, Bimbo's 365 Club |
-| SeeTickets plugin | The Chapel, Rickshaw Stop, Hotel Utah Saloon, Great American Music Hall |
+| SeeTickets plugin | The Chapel, Rickshaw Stop, Hotel Utah Saloon, Great American Music Hall, Thee Stork Club (Oakland) |
 | schema.org JSON-LD | The Fillmore, The Masonic, The Midway |
 | DICE widget | Kilowatt, The Knockout, Halcyon |
-| Venue sites | Café du Nord, Swedish American Hall, Bill Graham Civic, The Warfield, The Regency Ballroom, Bottom of the Hill, Public Works, 1015 Folsom, DNA Lounge, Audio, Boom Boom Room, Gray Area |
+| Another Planet | Bill Graham Civic, Fox Theater (Oakland), Greek Theatre (Berkeley) |
+| Venue sites | Café du Nord, Swedish American Hall, The Warfield, The Regency Ballroom, Bottom of the Hill, Public Works, 1015 Folsom, DNA Lounge, Audio, Boom Boom Room, Gray Area |
 | [19hz.info](https://19hz.info/eventlisting_BayArea.php) | The Great Northern, Monarch (no scrapable calendar of their own) |
 
 The website also takes prices from 19hz.info for shows whose venue page lists none
@@ -52,8 +54,10 @@ keep prices on their ticketing sites).
 ## Website
 
 The same listings as a static page: **https://sf-music-calendar.pages.dev**. Search, a
-when filter (tonight, weekend, or a day picked from a calendar), and a venue picker;
-the filters live in the URL, so a view can be bookmarked or shared.
+when filter (tonight, weekend, or a day picked from a calendar), a city picker (SF by
+default; tick Oakland or Berkeley to add them), a venue-type filter (bars, clubs, small,
+mid-size and large venues, other) and a venue picker. The filters live in the URL, so a
+view can be bookmarked or shared.
 
 A LaunchAgent on the Mac rebuilds and redeploys it every Sunday at 9:00:
 

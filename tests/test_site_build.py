@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -57,9 +58,12 @@ class ExportTest(unittest.TestCase):
             },
             {
                 "name": "Beta Room",
-                "area": "SoMa",
+                "area": "Uptown",
+                "kind": "club",
+                "city": "Oakland",
                 "base_url": "https://beta.example",
                 "calendar_path": "/",
+                "home_url": "https://beta.home/",
             },
         ]
         today = date.today()
@@ -112,12 +116,38 @@ class ExportTest(unittest.TestCase):
 
         self.assertEqual(
             [
-                (v["name"], v["area"], v["url"], v["shows"], v["stale"])
+                (
+                    v["name"],
+                    v["area"],
+                    v["city"],
+                    v["kind"],
+                    v["url"],
+                    v["shows"],
+                    v["stale"],
+                )
                 for v in data["venues"]
             ],
             [
-                ("Alpha Hall", "Mission", "https://alpha.example/shows", 1, False),
-                ("Beta Room", "SoMa", "https://beta.example/", 1, True),
+                # no city or kind configured: San Francisco, "other"
+                (
+                    "Alpha Hall",
+                    "Mission",
+                    "San Francisco",
+                    "other",
+                    "https://alpha.example/shows",
+                    1,
+                    False,
+                ),
+                # home_url wins over the scraped calendar for the link
+                (
+                    "Beta Room",
+                    "Uptown",
+                    "Oakland",
+                    "club",
+                    "https://beta.home/",
+                    1,
+                    True,
+                ),
             ],
         )
         # past shows are left out; events point at venues by index, in date order
@@ -137,6 +167,25 @@ class ExportTest(unittest.TestCase):
     def test_no_scrape_marks_nothing_stale(self):
         data = self.build.export(self.configs, self.db, {})
         self.assertFalse(any(v["stale"] for v in data["venues"]))
+
+
+class VenueConfigTest(unittest.TestCase):
+    def test_every_venue_has_a_known_kind_and_city(self):
+        from venues_config import CITIES, DEFAULT_CITY, VENUE_KINDS, get_venues_config
+
+        for cfg in get_venues_config():
+            self.assertIn(cfg.get("kind"), VENUE_KINDS, cfg["name"])
+            self.assertIn(cfg.get("city", DEFAULT_CITY), CITIES, cfg["name"])
+
+    def test_kind_labels_match_the_page(self):
+        from venues_config import VENUE_KINDS
+
+        app = (ROOT / "site" / "public" / "app.js").read_text(encoding="utf-8")
+        block = app[
+            app.index("const KINDS = {") : app.index("};", app.index("const KINDS = {"))
+        ]
+
+        self.assertEqual(re.findall(r"(\w+):\s*\"", block), VENUE_KINDS)
 
 
 if __name__ == "__main__":

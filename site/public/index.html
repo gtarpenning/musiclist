@@ -46,7 +46,22 @@
             <div class="cal" id="cal" role="grid" aria-labelledby="cal-title"></div>
           </div>
         </div>
-        <button type="button" class="venue-btn" id="venue-btn" aria-expanded="false" aria-controls="venue-panel">all venues ▾</button>
+        <div class="pickers" role="group" aria-label="Where">
+          <div class="drop-wrap">
+            <button type="button" class="pick-btn city-btn" id="city-btn" aria-expanded="false" aria-controls="city-panel">SF ▾</button>
+            <div class="panel drop" id="city-panel" hidden>
+              <div class="opts" id="city-opts"></div>
+            </div>
+          </div>
+          <div class="drop-wrap">
+            <button type="button" class="pick-btn" id="kind-btn" aria-expanded="false" aria-controls="kind-panel">all kinds ▾</button>
+            <div class="panel drop" id="kind-panel" hidden>
+              <div class="opts" id="kind-opts"></div>
+              <button type="button" class="textbtn" data-action="all-kinds">show all</button>
+            </div>
+          </div>
+          <button type="button" class="pick-btn" id="venue-btn" aria-expanded="false" aria-controls="venue-panel">all venues ▾</button>
+        </div>
       </div>
       <div class="panel" id="venue-panel" hidden>
         <div class="panel-head">
@@ -67,7 +82,7 @@
     <footer class="foot">
       <h2 class="tw-label">venues</h2>
       <ul class="venue-index" id="venue-index"></ul>
-      <p class="foot-note">Listings come from each venue's own calendar and refresh every Sunday. Check the venue before you go.</p>
+      <p class="foot-note">Listings come from each venue's own calendar (a few clubs and prices from 19hz.info) and refresh every Sunday. Check the venue before you go.</p>
     </footer>
   </div>
   <script src="app.js?v=__VERSION__"></script>
